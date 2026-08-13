@@ -1,47 +1,26 @@
 import os
+import json
+import html
+import math
 import urllib.parse
+from datetime import datetime, timezone, timedelta
 from playwright.sync_api import sync_playwright
 
-
 SITE_URL = "https://otoku-ranking.pages.dev/"
+API_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
+SEARCH_KEYWORD = "イヤホン"
 
-API_URL = (
-    "https://openapi.rakuten.co.jp/"
-    "ichibams/api/IchibaItem/Search/20260701"
-)
+APPLICATION_ID = os.getenv("RAKUTEN_APPLICATION_ID", "").strip()
+ACCESS_KEY = os.getenv("RAKUTEN_ACCESS_KEY", "").strip()
+AFFILIATE_ID = os.getenv("RAKUTEN_AFFILIATE_ID", "").strip()
 
-
-APPLICATION_ID = os.getenv(
-    "RAKUTEN_APPLICATION_ID",
-    ""
-).strip()
-
-ACCESS_KEY = os.getenv(
-    "RAKUTEN_ACCESS_KEY",
-    ""
-).strip()
-
-AFFILIATE_ID = os.getenv(
-    "RAKUTEN_AFFILIATE_ID",
-    ""
-).strip()
-
-
-if not APPLICATION_ID:
-    raise RuntimeError(
-        "RAKUTEN_APPLICATION_ID がありません"
-    )
-
-if not ACCESS_KEY:
-    raise RuntimeError(
-        "RAKUTEN_ACCESS_KEY がありません"
-    )
-
-if not AFFILIATE_ID:
-    raise RuntimeError(
-        "RAKUTEN_AFFILIATE_ID がありません"
-    )
-
+for name, value in {
+    "RAKUTEN_APPLICATION_ID": APPLICATION_ID,
+    "RAKUTEN_ACCESS_KEY": ACCESS_KEY,
+    "RAKUTEN_AFFILIATE_ID": AFFILIATE_ID,
+}.items():
+    if not value:
+        raise RuntimeError(f"{name} が設定されていません。")
 
 params = {
     "applicationId": APPLICATION_ID,
@@ -49,123 +28,20 @@ params = {
     "affiliateId": AFFILIATE_ID,
     "format": "json",
     "formatVersion": 2,
-    "keyword": "イヤホン",
-    "hits": 1,
+    "keyword": SEARCH_KEYWORD,
+    "hits": 30,
+    "imageFlag": 1,
+    "hasReviewFlag": 1,
+    "availability": 1,
+    "sort": "-reviewCount",
 }
 
-
-api_url = (
-    API_URL
-    + "?"
-    + urllib.parse.urlencode(params)
-)
-
-
-print("")
-print("====================================")
-print("楽天API 接続診断開始")
-print("====================================")
-print("")
-
+api_url = API_URL + "?" + urllib.parse.urlencode(params)
 
 with sync_playwright() as p:
-
-    browser = p.chromium.launch(
-        headless=True
-    )
-
-    context = browser.new_context(
-        locale="ja-JP"
-    )
-
-    page = context.new_page()
-
-    page.set_default_timeout(
-        15000
-    )
-
-
-    # ---------------------------------
-    # 実際のAPIリクエストを監視
-    # ---------------------------------
-
-    request_info = {
-        "seen": False,
-        "origin": "",
-        "referer": "",
-        "sec_fetch_site": "",
-    }
-
-    response_info = {
-        "seen": False,
-        "status": None,
-    }
-
-
-    def handle_request(request):
-
-        if not request.url.startswith(
-            API_URL
-        ):
-            return
-
-        request_info["seen"] = True
-
-        headers = request.all_headers()
-
-        request_info["origin"] = (
-            headers.get(
-                "origin",
-                "(なし)"
-            )
-        )
-
-        request_info["referer"] = (
-            headers.get(
-                "referer",
-                "(なし)"
-            )
-        )
-
-        request_info["sec_fetch_site"] = (
-            headers.get(
-                "sec-fetch-site",
-                "(なし)"
-            )
-        )
-
-
-    def handle_response(response):
-
-        if not response.url.startswith(
-            API_URL
-        ):
-            return
-
-        response_info["seen"] = True
-        response_info["status"] = (
-            response.status
-        )
-
-
-    page.on(
-        "request",
-        handle_request
-    )
-
-    page.on(
-        "response",
-        handle_response
-    )
-
-
-    # ---------------------------------
-    # 1. 自分のサイトを開く
-    # ---------------------------------
-
-    print(
-        "1. 公開サイトを開いています..."
-    )
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page(locale="ja-JP")
+    page.set_default_timeout(15000)
 
     site_response = page.goto(
         SITE_URL,
@@ -173,130 +49,554 @@ with sync_playwright() as p:
         timeout=15000,
     )
 
+    if site_response is None or site_response.status >= 400:
+        browser.close()
+        raise RuntimeError("公開サイトを正常に開けませんでした。")
 
-    if site_response is None:
-
-        print(
-            "公開サイト: 応答なし"
-        )
-
-    else:
-
-        print(
-            "公開サイト HTTP:",
-            site_response.status
-        )
-
-
-    # ---------------------------------
-    # 2. ページ内fetchでAPIを呼ぶ
-    #
-    # 10秒で強制停止する
-    # ---------------------------------
-
-    print("")
-    print(
-        "2. 楽天APIを呼び出しています..."
-    )
-
-
-    fetch_result = page.evaluate(
+    result = page.evaluate(
         """
         async (url) => {
-
-            const controller =
-                new AbortController();
-
-            const timer =
-                setTimeout(
-                    () => controller.abort(),
-                    10000
-                );
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 12000);
 
             try {
-
-                const response =
-                    await fetch(
-                        url,
-                        {
-                            method: "GET",
-                            cache: "no-store",
-                            credentials: "omit",
-                            signal: controller.signal
-                        }
-                    );
+                const response = await fetch(url, {
+                    method: "GET",
+                    cache: "no-store",
+                    credentials: "omit",
+                    signal: controller.signal
+                });
 
                 return {
-                    type: "response",
-                    status: response.status
+                    ok: true,
+                    status: response.status,
+                    text: await response.text()
                 };
 
             } catch (error) {
-
                 return {
-                    type: "error",
-                    message: String(error)
+                    ok: false,
+                    status: 0,
+                    error: String(error)
                 };
 
             } finally {
-
                 clearTimeout(timer);
-
             }
-
         }
         """,
         api_url,
     )
 
-
-    # ---------------------------------
-    # 診断結果
-    # ---------------------------------
-
-    print("")
-    print("====================================")
-    print("診断結果")
-    print("====================================")
-
-    print(
-        "APIリクエスト発生:",
-        request_info["seen"]
-    )
-
-    print(
-        "Origin:",
-        request_info["origin"]
-    )
-
-    print(
-        "Referer:",
-        request_info["referer"]
-    )
-
-    print(
-        "Sec-Fetch-Site:",
-        request_info["sec_fetch_site"]
-    )
-
-    print(
-        "APIレスポンス発生:",
-        response_info["seen"]
-    )
-
-    print(
-        "HTTP Status:",
-        response_info["status"]
-    )
-
-    print(
-        "ブラウザfetch結果:",
-        fetch_result
-    )
-
-    print("====================================")
-    print("診断終了")
-    print("====================================")
-    print("")
-
     browser.close()
+
+if not result.get("ok"):
+    raise RuntimeError(
+        "楽天APIへのアクセスに失敗しました: "
+        + str(result.get("error", "不明なエラー"))
+    )
+
+if int(result.get("status", 0)) != 200:
+    raise RuntimeError(
+        f"楽天API HTTP {result.get('status')}\n"
+        + result.get("text", "")[:1500]
+    )
+
+data = json.loads(result["text"])
+
+raw_items = data.get("items") or data.get("Items") or []
+
+items = []
+
+for entry in raw_items:
+    if not isinstance(entry, dict):
+        continue
+
+    if isinstance(entry.get("Item"), dict):
+        items.append(entry["Item"])
+
+    elif isinstance(entry.get("item"), dict):
+        items.append(entry["item"])
+
+    else:
+        items.append(entry)
+
+
+def to_int(value):
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def to_float(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def image_url(item):
+    images = item.get("mediumImageUrls", [])
+
+    if not images:
+        return ""
+
+    first = images[0]
+
+    if isinstance(first, str):
+        return first
+
+    if isinstance(first, dict):
+        return first.get("imageUrl", "")
+
+    return ""
+
+
+def score(item):
+    rating = to_float(item.get("reviewAverage"))
+    reviews = to_int(item.get("reviewCount"))
+
+    return (
+        rating * 20
+        + math.log10(reviews + 1) * 8
+    )
+
+
+items = [
+    item for item in items
+    if to_int(item.get("reviewCount")) >= 10
+    and to_float(item.get("reviewAverage")) > 0
+    and to_int(item.get("itemPrice")) > 0
+]
+
+if not items:
+    raise RuntimeError(
+        "ランキング対象の商品がありませんでした。"
+    )
+
+items.sort(
+    key=score,
+    reverse=True
+)
+
+items = items[:10]
+
+cards = []
+
+for rank, item in enumerate(items, 1):
+
+    name = html.escape(
+        str(item.get("itemName", "商品名なし"))
+    )
+
+    shop = html.escape(
+        str(item.get("shopName", ""))
+    )
+
+    price = to_int(
+        item.get("itemPrice")
+    )
+
+    rating = to_float(
+        item.get("reviewAverage")
+    )
+
+    reviews = to_int(
+        item.get("reviewCount")
+    )
+
+    image = html.escape(
+        image_url(item),
+        quote=True
+    )
+
+    link = html.escape(
+        item.get("affiliateUrl")
+        or item.get("itemUrl")
+        or "",
+        quote=True
+    )
+
+    if image:
+        img = (
+            f'<img src="{image}" '
+            f'alt="{name}" '
+            f'loading="lazy">'
+        )
+    else:
+        img = ""
+
+    cards.append(
+        f"""
+        <article class="card">
+
+          <div class="rank">
+            {rank}
+          </div>
+
+          <div class="photo">
+            {img}
+          </div>
+
+          <div class="info">
+
+            <h2>
+              {name}
+            </h2>
+
+            <div class="shop">
+              {shop}
+            </div>
+
+            <div class="rating">
+              ★ {rating:.2f}
+
+              <span>
+                ({reviews:,}件)
+              </span>
+            </div>
+
+            <div class="price">
+              {price:,}円
+            </div>
+
+            <a
+              class="button"
+              href="{link}"
+              target="_blank"
+              rel="nofollow sponsored noopener"
+            >
+              楽天市場で見る
+            </a>
+
+          </div>
+
+        </article>
+        """
+    )
+
+updated = datetime.now(
+    timezone(
+        timedelta(hours=9)
+    )
+).strftime(
+    "%Y年%m月%d日 %H:%M"
+)
+
+page_html = """<!doctype html>
+
+<html lang="ja">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+>
+
+<title>
+イヤホン高評価ランキング | お得商品ランキング
+</title>
+
+<meta
+  name="description"
+  content="楽天市場の商品データをもとにイヤホンを自動比較したランキングです。"
+>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f8;
+  color: #222;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+}
+
+header {
+  background: #fff;
+  padding: 24px 16px;
+  border-bottom: 1px solid #ddd;
+}
+
+header div,
+main,
+footer {
+  max-width: 760px;
+  margin: auto;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+}
+
+header p {
+  margin: 0;
+  color: #666;
+  line-height: 1.6;
+}
+
+main {
+  padding: 18px 12px;
+}
+
+.notice {
+  background: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.pr {
+  display: inline-block;
+  background: #eee;
+  border-radius: 5px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  background: #fff;
+  padding: 16px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+
+.rank {
+  position: absolute;
+  top: -7px;
+  left: -5px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #222;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.photo {
+  width: 110px;
+  min-width: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+}
+
+.info {
+  flex: 1;
+}
+
+h2 {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 7px;
+}
+
+.shop {
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 7px;
+}
+
+.rating {
+  font-weight: bold;
+  margin-bottom: 7px;
+}
+
+.rating span {
+  font-size: 12px;
+  color: #777;
+  font-weight: normal;
+}
+
+.price {
+  font-size: 21px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.button {
+  display: inline-block;
+  background: #bf0000;
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+footer {
+  padding: 18px 14px 40px;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media(max-width:520px) {
+
+  .photo {
+    width: 90px;
+    min-width: 90px;
+  }
+
+  .photo img {
+    width: 90px;
+    height: 90px;
+  }
+
+  h2 {
+    font-size: 13px;
+  }
+
+  .price {
+    font-size: 18px;
+  }
+
+  .button {
+    font-size: 13px;
+    padding: 9px 11px;
+  }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div>
+
+<h1>
+イヤホン 高評価ランキング
+</h1>
+
+<p>
+楽天市場の商品データをもとに、
+レビュー評価とレビュー件数から
+自動更新しています。
+</p>
+
+</div>
+
+</header>
+
+<main>
+
+<div class="notice">
+
+<span class="pr">
+広告・PR
+</span>
+
+<br>
+
+<strong>
+最終更新：
+</strong>
+
+__UPDATED__
+
+<br>
+
+レビュー10件以上の商品を対象に
+掲載しています。
+
+</div>
+
+__CARDS__
+
+</main>
+
+<footer>
+
+<p>
+当サイトは楽天アフィリエイトを利用しています。
+価格・在庫等は取得時点の情報です。
+購入前に楽天市場の商品ページで
+最新情報をご確認ください。
+</p>
+
+<a
+  href="https://developers.rakuten.com/"
+  target="_blank"
+  rel="noopener"
+>
+Supported by Rakuten Developers
+</a>
+
+</footer>
+
+</body>
+
+</html>
+"""
+
+page_html = (
+    page_html
+    .replace(
+        "__UPDATED__",
+        updated
+    )
+    .replace(
+        "__CARDS__",
+        "".join(cards)
+    )
+)
+
+os.makedirs(
+    "public",
+    exist_ok=True
+)
+
+with open(
+    "public/index.html",
+    "w",
+    encoding="utf-8"
+) as f:
+
+    f.write(
+        page_html
+    )
+
+print(
+    "楽天ランキング生成成功"
+)
+
+print(
+    f"掲載件数: {len(items)}"
+)
+
+print(
+    "public/index.html を更新しました。"
+)
