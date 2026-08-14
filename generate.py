@@ -8,13 +8,24 @@ from string import Template
 
 from playwright.sync_api import sync_playwright
 
+
 SITE_URL = "https://otoku-ranking.pages.dev/"
 API_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
+
 SEARCH_KEYWORD = "イヤホン"
+
+# 楽天市場
+# 「ヘッドホン・イヤホン」ジャンル
+EARPHONE_GENRE_ID = 502835
+
+MIN_REVIEW_COUNT = 10
+RANKING_SIZE = 10
+
 
 GOOGLE_SITE_VERIFICATION = (
     "xebuT18VaLulU2FGAl1MrnJnOgS4b1ZjrZcFaV45KyQ"
 )
+
 
 APPLICATION_ID = os.getenv(
     "RAKUTEN_APPLICATION_ID",
@@ -39,30 +50,67 @@ for name, value in {
 }.items():
 
     if not value:
+
         raise RuntimeError(
             f"{name} が設定されていません。"
         )
 
 
+# =========================================================
+# APIパラメータ
+# =========================================================
+
 params = {
-    "applicationId": APPLICATION_ID,
-    "accessKey": ACCESS_KEY,
-    "affiliateId": AFFILIATE_ID,
-    "format": "json",
-    "formatVersion": 2,
-    "keyword": SEARCH_KEYWORD,
-    "hits": 30,
-    "imageFlag": 1,
-    "hasReviewFlag": 1,
-    "availability": 1,
-    "sort": "-reviewCount",
+
+    "applicationId":
+        APPLICATION_ID,
+
+    "accessKey":
+        ACCESS_KEY,
+
+    "affiliateId":
+        AFFILIATE_ID,
+
+    "format":
+        "json",
+
+    "formatVersion":
+        2,
+
+    "keyword":
+        SEARCH_KEYWORD,
+
+    # イヤホン系ジャンルに限定
+    "genreId":
+        EARPHONE_GENRE_ID,
+
+    # 絞り込み検索
+    "field":
+        1,
+
+    "hits":
+        30,
+
+    "imageFlag":
+        1,
+
+    "hasReviewFlag":
+        1,
+
+    "availability":
+        1,
+
+    "sort":
+        "-reviewCount",
 }
 
 
 api_url = (
     API_URL
     + "?"
-    + urllib.parse.urlencode(params)
+    + urllib.parse.urlencode(
+        params
+    )
 )
 
 
@@ -159,7 +207,13 @@ with sync_playwright() as p:
     browser.close()
 
 
-if not result.get("ok"):
+# =========================================================
+# APIレスポンス検証
+# =========================================================
+
+if not result.get(
+    "ok"
+):
 
     raise RuntimeError(
         "楽天APIへのアクセスに失敗しました: "
@@ -188,9 +242,17 @@ if int(
     )
 
 
-data = json.loads(
-    result["text"]
-)
+try:
+
+    data = json.loads(
+        result["text"]
+    )
+
+except json.JSONDecodeError as error:
+
+    raise RuntimeError(
+        "楽天APIのJSON解析に失敗しました。"
+    ) from error
 
 
 raw_items = (
@@ -199,6 +261,20 @@ raw_items = (
     or []
 )
 
+
+if not isinstance(
+    raw_items,
+    list
+):
+
+    raise RuntimeError(
+        "楽天APIの商品一覧形式が想定外です。"
+    )
+
+
+# =========================================================
+# 商品一覧取り出し
+# =========================================================
 
 items = []
 
@@ -209,6 +285,7 @@ for entry in raw_items:
         entry,
         dict
     ):
+
         continue
 
 
@@ -239,11 +316,24 @@ for entry in raw_items:
         )
 
 
+# API自体がおかしい場合は公開しない
+if len(
+    items
+) < RANKING_SIZE:
+
+    raise RuntimeError(
+        "楽天APIから取得できた商品が少なすぎます。"
+        f"取得件数: {len(items)}"
+    )
+
+
 # =========================================================
 # 数値変換
 # =========================================================
 
-def to_int(value):
+def to_int(
+    value
+):
 
     try:
 
@@ -259,7 +349,9 @@ def to_int(value):
         return 0
 
 
-def to_float(value):
+def to_float(
+    value
+):
 
     try:
 
@@ -279,7 +371,9 @@ def to_float(value):
 # 画像URL
 # =========================================================
 
-def get_image_url(item):
+def get_image_url(
+    item
+):
 
     images = item.get(
         "mediumImageUrls",
@@ -318,16 +412,257 @@ def get_image_url(item):
 
 
 # =========================================================
-# ランキングスコア
+# 商品名正規化
 # =========================================================
 
-def score(item):
+def normalize_text(
+    value
+):
+
+    return (
+        str(
+            value or ""
+        )
+        .lower()
+        .replace(
+            "　",
+            " "
+        )
+    )
+
+
+# =========================================================
+# イヤホン判定
+# =========================================================
+
+EARPHONE_WORDS = (
+
+    "イヤホン",
+
+    "イヤフォン",
+
+    "earphone",
+
+    "earphones",
+
+    "earbud",
+
+    "earbuds",
+
+)
+
+
+# 明らかに
+# 「イヤホン本体ではない」
+# 商品だけを除外する。
+#
+# 「イヤホンジャック」単体は
+# 有線イヤホン本体にも使われるため
+# 除外しない。
+
+HARD_EXCLUDE_WORDS = (
+
+    "イヤホンジャックストラップ",
+
+    "イヤホンジャック用ストラップ",
+
+    "イヤホンジャックアクセサリー",
+
+    "イヤホンジャックピアス",
+
+    "ジャックピアス",
+
+    "防災ラジオ",
+
+    "ポータブルラジオ",
+
+    "ラジオ付きライト",
+
+    "イヤホン変換アダプタ",
+
+    "イヤホン変換アダプター",
+
+    "オーディオ変換アダプタ",
+
+    "オーディオ変換アダプター",
+
+    "イヤホン変換ケーブル",
+
+    "イヤホン延長ケーブル",
+
+    "イヤホン分配ケーブル",
+
+    "イヤホンスプリッター",
+
+    "イヤホン収納ケースのみ",
+
+    "イヤホンケースのみ",
+
+    "充電ケースのみ",
+
+    "交換用充電ケース",
+
+)
+
+
+def get_rejection_reason(
+    item
+):
+
+    name = normalize_text(
+        item.get(
+            "itemName",
+            ""
+        )
+    )
+
+
+    genre_id = to_int(
+        item.get(
+            "genreId"
+        )
+    )
+
+
+    # -----------------------------
+    # ジャンル確認
+    # -----------------------------
+
+    if genre_id != EARPHONE_GENRE_ID:
+
+        return (
+            f"genreId不一致({genre_id})"
+        )
+
+
+    # -----------------------------
+    # 商品名にイヤホン表現があるか
+    # -----------------------------
+
+    if not any(
+        word in name
+        for word in EARPHONE_WORDS
+    ):
+
+        return (
+            "商品名にイヤホン表現なし"
+        )
+
+
+    # -----------------------------
+    # 明らかな非イヤホン商品
+    # -----------------------------
+
+    for word in HARD_EXCLUDE_WORDS:
+
+        if word in name:
+
+            return (
+                f"除外語句: {word}"
+            )
+
+
+    # -----------------------------
+    # レビュー件数
+    # -----------------------------
+
+    reviews = to_int(
+        item.get(
+            "reviewCount"
+        )
+    )
+
+
+    if reviews < MIN_REVIEW_COUNT:
+
+        return (
+            "レビュー件数不足"
+        )
+
+
+    # -----------------------------
+    # レビュー評価
+    # -----------------------------
 
     rating = to_float(
         item.get(
             "reviewAverage"
         )
     )
+
+
+    if not (
+        0 < rating <= 5
+    ):
+
+        return (
+            "レビュー評価異常"
+        )
+
+
+    # -----------------------------
+    # 価格
+    # -----------------------------
+
+    price = to_int(
+        item.get(
+            "itemPrice"
+        )
+    )
+
+
+    if price <= 0:
+
+        return (
+            "価格異常"
+        )
+
+
+    # -----------------------------
+    # アフィリエイトURL
+    # -----------------------------
+
+    affiliate_url = str(
+        item.get(
+            "affiliateUrl"
+        )
+        or ""
+    )
+
+
+    if (
+        not affiliate_url.startswith(
+            "https://"
+        )
+        or
+        "hb.afl.rakuten.co.jp"
+        not in affiliate_url
+    ):
+
+        return (
+            "アフィリエイトURL不正"
+        )
+
+
+    return ""
+
+
+# =========================================================
+# ランキングスコア
+#
+# 今回は既存ロジックを変更しない
+# =========================================================
+
+def score(
+    item
+):
+
+    rating = to_float(
+        item.get(
+            "reviewAverage"
+        )
+    )
+
 
     reviews = to_int(
         item.get(
@@ -349,37 +684,81 @@ def score(item):
 # 商品絞り込み
 # =========================================================
 
-filtered = [
-    item
-    for item in items
-    if (
-        to_int(
-            item.get(
-                "reviewCount"
-            )
-        ) >= 10
-        and
-        to_float(
-            item.get(
-                "reviewAverage"
-            )
-        ) > 0
-        and
-        to_int(
-            item.get(
-                "itemPrice"
-            )
-        ) > 0
+filtered = []
+
+excluded_items = []
+
+
+for item in items:
+
+    reason = get_rejection_reason(
+        item
     )
-]
 
 
-if not filtered:
+    if reason:
+
+        excluded_items.append(
+            {
+                "name":
+                    str(
+                        item.get(
+                            "itemName",
+                            "商品名なし"
+                        )
+                    ),
+
+                "reason":
+                    reason,
+            }
+        )
+
+        continue
+
+
+    filtered.append(
+        item
+    )
+
+
+# =========================================================
+# fail-safe
+#
+# 正常なイヤホンが10件揃わなければ
+# public/index.htmlを変更しない
+# =========================================================
+
+if len(
+    filtered
+) < RANKING_SIZE:
+
+    print(
+        "除外された商品:"
+    )
+
+
+    for excluded in excluded_items[
+        :20
+    ]:
+
+        print(
+            f"- "
+            f"{excluded['reason']}"
+            f" | "
+            f"{excluded['name'][:100]}"
+        )
+
 
     raise RuntimeError(
-        "ランキング対象の商品がありませんでした。"
+        "正常なイヤホン候補が10件未満のため"
+        "更新を中止します。"
+        f" 候補件数: {len(filtered)}"
     )
 
+
+# =========================================================
+# ランキング作成
+# =========================================================
 
 filtered.sort(
     key=score,
@@ -388,8 +767,20 @@ filtered.sort(
 
 
 ranking_items = (
-    filtered[:10]
+    filtered[
+        :RANKING_SIZE
+    ]
 )
+
+
+if len(
+    ranking_items
+) != RANKING_SIZE:
+
+    raise RuntimeError(
+        "ランキング10件を生成できなかったため"
+        "更新を中止します。"
+    )
 
 
 # =========================================================
@@ -403,7 +794,6 @@ for rank, item in enumerate(
     ranking_items,
     1
 ):
-
 
     name = html.escape(
         str(
@@ -454,22 +844,23 @@ for rank, item in enumerate(
     )
 
 
-    affiliate_url = (
+    affiliate_url = str(
         item.get(
             "affiliateUrl"
         )
-        or
-        item.get(
-            "itemUrl"
-        )
-        or
-        ""
+        or ""
     )
 
 
-    # アフィリエイトリンクが
-    # 正常な楽天リンクか自動確認
+    # アフィリエイトリンクを
+    # 実際にクリックせず
+    # URL形式のみ検証
+
     if (
+        not affiliate_url.startswith(
+            "https://"
+        )
+        or
         "hb.afl.rakuten.co.jp"
         not in affiliate_url
     ):
@@ -1154,6 +1545,12 @@ page_html = page_template.substitute(
 
 # =========================================================
 # 保存
+#
+# tempファイル
+# ↓
+# HTML検証
+# ↓
+# 正常な場合だけindex.htmlへ置換
 # =========================================================
 
 os.makedirs(
@@ -1162,8 +1559,17 @@ os.makedirs(
 )
 
 
+temp_path = (
+    "public/index.html.tmp"
+)
+
+final_path = (
+    "public/index.html"
+)
+
+
 with open(
-    "public/index.html",
+    temp_path,
     "w",
     encoding="utf-8",
 ) as f:
@@ -1174,6 +1580,44 @@ with open(
 
 
 # =========================================================
+# HTML最終検証
+# =========================================================
+
+if (
+    "<html" not in page_html
+    or
+    "</html>" not in page_html
+    or
+    page_html.count(
+        'class="card"'
+    ) != RANKING_SIZE
+):
+
+    if os.path.exists(
+        temp_path
+    ):
+
+        os.remove(
+            temp_path
+        )
+
+
+    raise RuntimeError(
+        "生成HTMLの検証に失敗したため"
+        "更新を中止します。"
+    )
+
+
+# 正常な場合だけ
+# index.htmlを置き換える
+
+os.replace(
+    temp_path,
+    final_path,
+)
+
+
+# =========================================================
 # ログ
 # =========================================================
 
@@ -1181,18 +1625,69 @@ print(
     "楽天ランキング生成成功"
 )
 
+
+print(
+    f"API取得件数: "
+    f"{len(items)}"
+)
+
+
+print(
+    f"イヤホン候補件数: "
+    f"{len(filtered)}"
+)
+
+
+print(
+    f"除外件数: "
+    f"{len(excluded_items)}"
+)
+
+
+if excluded_items:
+
+    print(
+        "除外商品の確認ログ:"
+    )
+
+
+    for excluded in excluded_items[
+        :10
+    ]:
+
+        print(
+            f"- "
+            f"{excluded['reason']}"
+            f" | "
+            f"{excluded['name'][:100]}"
+        )
+
+
 print(
     f"掲載件数: "
     f"{len(ranking_items)}"
 )
 
+
+print(
+    "Genre validation: OK"
+)
+
+
 print(
     "Google Search Console verification tag: OK"
 )
 
+
 print(
     "Affiliate URL validation: OK"
 )
+
+
+print(
+    "Fail-safe HTML validation: OK"
+)
+
 
 print(
     "public/index.html を更新しました。"
