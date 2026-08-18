@@ -16,6 +16,7 @@ MIN_REVIEW_COUNT = 10
 RANKING_SIZE = 10
 BAYES_PRIOR_WEIGHT = 100
 UNDER_5000_MAX_PRICE = 5000
+UNDER_10000_MAX_PRICE = 10000
 
 GOOGLE_SITE_VERIFICATION = "xebuT18VaLulU2FGAl1MrnJnOgS4b1ZjrZcFaV45KyQ"
 
@@ -379,6 +380,23 @@ under_5000_ranking_items, under_5000_prior_rating = rank_items(
     under_5000_filtered
 )
 
+under_10000_filtered = [
+    item
+    for item in filtered
+    if to_int(item.get("itemPrice")) <= UNDER_10000_MAX_PRICE
+]
+
+if len(under_10000_filtered) < RANKING_SIZE:
+    raise RuntimeError(
+        "1万円以下の正常なイヤホン候補が10件未満のため"
+        "更新を中止します。"
+        f" 候補件数: {len(under_10000_filtered)}"
+    )
+
+under_10000_ranking_items, under_10000_prior_rating = rank_items(
+    under_10000_filtered
+)
+
 
 # =========================================================
 # HTML生成
@@ -523,6 +541,7 @@ footer {
 <nav class="ranking-nav" aria-label="イヤホンランキング">
     <a href="/">高評価ランキング</a>
     <a href="/earphones/under-5000/">5,000円以下</a>
+    <a href="/earphones/under-10000/">1万円以下</a>
 </nav>
 <main>
     <div class="notice">
@@ -627,12 +646,45 @@ under_5000_page_html = build_page(
     ranking_items=under_5000_ranking_items,
 )
 
+under_10000_page_html = build_page(
+    title=(
+        "1万円以下のイヤホン高評価ランキング｜"
+        "楽天レビューを毎日自動比較"
+    ),
+    meta_description=(
+        "楽天市場の1万円以下のイヤホンを、レビュー評価とレビュー件数の"
+        "信頼度をもとに毎日自動比較する高評価ランキングです。"
+    ),
+    canonical_url=(
+        "https://otoku-ranking.pages.dev/earphones/under-10000/"
+    ),
+    h1="1万円以下 イヤホン高評価ランキング",
+    header_description=(
+        "楽天市場の商品データから1万円以下のイヤホンだけを抽出し、"
+        "毎日自動比較しています。"
+    ),
+    ranking_description=(
+        "1万円以下かつレビュー10件以上の商品を対象に、候補商品の"
+        "平均評価を基準にベイズ補正を行い、評価の高さとレビュー件数の"
+        "信頼度を両方反映して順位を決定しています。"
+    ),
+    ranking_items=under_10000_ranking_items,
+)
+
 if any(
     to_int(item.get("itemPrice")) > UNDER_5000_MAX_PRICE
     for item in under_5000_ranking_items
 ):
     raise RuntimeError(
         "5,000円以下ランキングに5,000円超の商品が含まれています。"
+    )
+
+if any(
+    to_int(item.get("itemPrice")) > UNDER_10000_MAX_PRICE
+    for item in under_10000_ranking_items
+):
+    raise RuntimeError(
+        "1万円以下ランキングに1万円超の商品が含まれています。"
     )
 
 
@@ -645,6 +697,10 @@ pages_to_write = [
     (
         "public/earphones/under-5000/index.html",
         under_5000_page_html,
+    ),
+    (
+        "public/earphones/under-10000/index.html",
+        under_10000_page_html,
     ),
 ]
 
@@ -685,8 +741,11 @@ print(f"総合ベイズ事前平均: {prior_rating:.4f}")
 print(f"5,000円以下候補件数: {len(under_5000_filtered)}")
 print(f"5,000円以下掲載件数: {len(under_5000_ranking_items)}")
 print(f"5,000円以下ベイズ事前平均: {under_5000_prior_rating:.4f}")
+print(f"1万円以下候補件数: {len(under_10000_filtered)}")
+print(f"1万円以下掲載件数: {len(under_10000_ranking_items)}")
+print(f"1万円以下ベイズ事前平均: {under_10000_prior_rating:.4f}")
 print(f"ベイズ事前レビュー数: {BAYES_PRIOR_WEIGHT}")
 print("Genre validation: OK")
 print("Affiliate URL validation: OK")
 print("Fail-safe HTML validation: OK")
-print("public/index.html と 5,000円以下ランキングを更新しました。")
+print("総合・5,000円以下・1万円以下ランキングを更新しました。")
