@@ -11,6 +11,7 @@ from playwright.sync_api import sync_playwright
 SITE_URL = "https://otoku-ranking.pages.dev/"
 API_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
 SEARCH_KEYWORD = "イヤホン"
+SEARCH_SORTS = ("-reviewCount", "-reviewAverage")
 EARPHONE_GENRE_ID = 502835
 MIN_REVIEW_COUNT = 10
 RANKING_SIZE = 10
@@ -34,9 +35,12 @@ for name, value in {
 
 # =========================================================
 # 楽天API取得
+#
+# レビュー件数順とレビュー評価順の2系統を取得し、
+# itemCodeで重複を除いてランキング母集団を広げる。
 # =========================================================
 
-params = {
+common_params = {
     "applicationId": APPLICATION_ID,
     "accessKey": ACCESS_KEY,
     "affiliateId": AFFILIATE_ID,
@@ -49,10 +53,15 @@ params = {
     "imageFlag": 1,
     "hasReviewFlag": 1,
     "availability": 1,
-    "sort": "-reviewCount",
 }
 
-api_url = API_URL + "?" + urllib.parse.urlencode(params)
+api_urls = []
+for sort_value in SEARCH_SORTS:
+    params = dict(common_params)
+    params["sort"] = sort_value
+    api_urls.append(
+        API_URL + "?" + urllib.parse.urlencode(params)
+    )
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
@@ -69,76 +78,107 @@ with sync_playwright() as p:
         browser.close()
         raise RuntimeError("公開サイトを正常に開けませんでした。")
 
-    result = page.evaluate(
+    results = page.evaluate(
         """
-        async (url) => {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 12000);
+        async (urls) => {
+            async function fetchOne(url) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 12000);
 
-            try {
-                const response = await fetch(url, {
-                    method: "GET",
-                    cache: "no-store",
-                    credentials: "omit",
-                    signal: controller.signal
-                });
+                try {
+                    const response = await fetch(url, {
+                        method: "GET",
+                        cache: "no-store",
+                        credentials: "omit",
+                        signal: controller.signal
+                    });
 
-                return {
-                    ok: true,
-                    status: response.status,
-                    text: await response.text()
-                };
-            } catch (error) {
-                return {
-                    ok: false,
-                    status: 0,
-                    error: String(error)
-                };
-            } finally {
-                clearTimeout(timer);
+                    return {
+                        url: url,
+                        ok: true,
+                        status: response.status,
+                        text: await response.text()
+                    };
+                } catch (error) {
+                    return {
+                        url: url,
+                        ok: false,
+                        status: 0,
+                        error: String(error)
+                    };
+                } finally {
+                    clearTimeout(timer);
+                }
             }
+
+            return await Promise.all(urls.map(fetchOne));
         }
         """,
-        api_url,
+        api_urls,
     )
 
     browser.close()
 
-if not result.get("ok"):
-    raise RuntimeError(
-        "楽天APIへのアクセスに失敗しました: "
-        + str(result.get("error", "不明なエラー"))
-    )
+if not isinstance(results, list) or len(results) != len(api_urls):
+    raise RuntimeError("楽天API複数取得の結果件数が想定外です。")
 
-if int(result.get("status", 0)) != 200:
-    raise RuntimeError(
-        f"楽天API HTTP {result.get('status')}\n"
-        + result.get("text", "")[:1500]
-    )
 
-try:
-    data = json.loads(result["text"])
-except json.JSONDecodeError as error:
-    raise RuntimeError("楽天APIのJSON解析に失敗しました。") from error
+def extract_items(api_result):
+    if not api_result.get("ok"):
+        raise RuntimeError(
+            "楽天APIへのアクセスに失敗しました: "
+            + str(api_result.get("error", "不明なエラー"))
+        )
 
-raw_items = data.get("items") or data.get("Items") or []
-if not isinstance(raw_items, list):
-    raise RuntimeError("楽天APIの商品一覧形式が想定外です。")
+    if int(api_result.get("status", 0)) != 200:
+        raise RuntimeError(
+            f"楽天API HTTP {api_result.get('status')}\n"
+            + api_result.get("text", "")[:1500]
+        )
 
-items = []
-for entry in raw_items:
-    if not isinstance(entry, dict):
-        continue
-    if isinstance(entry.get("Item"), dict):
-        items.append(entry["Item"])
-    elif isinstance(entry.get("item"), dict):
-        items.append(entry["item"])
-    else:
-        items.append(entry)
+    try:
+        data = json.loads(api_result["text"])
+    except json.JSONDecodeError as error:
+        raise RuntimeError("楽天APIのJSON解析に失敗しました。") from error
+
+    raw_items = data.get("items") or data.get("Items") or []
+    if not isinstance(raw_items, list):
+        raise RuntimeError("楽天APIの商品一覧形式が想定外です。")
+
+    extracted = []
+    for entry in raw_items:
+        if not isinstance(entry, dict):
+            continue
+        if isinstance(entry.get("Item"), dict):
+            extracted.append(entry["Item"])
+        elif isinstance(entry.get("item"), dict):
+            extracted.append(entry["item"])
+        else:
+            extracted.append(entry)
+
+    return extracted
+
+
+items_by_code = {}
+api_item_counts = []
+
+for api_result in results:
+    result_items = extract_items(api_result)
+    api_item_counts.append(len(result_items))
+
+    for item in result_items:
+        item_code = str(item.get("itemCode") or "").strip()
+        if not item_code:
+            item_code = str(item.get("affiliateUrl") or "").strip()
+        if not item_code:
+            continue
+        items_by_code[item_code] = item
+
+items = list(items_by_code.values())
 
 if len(items) < RANKING_SIZE:
     raise RuntimeError(
-        "楽天APIから取得できた商品が少なすぎます。"
+        "楽天APIから取得できた重複除外後の商品が少なすぎます。"
         f"取得件数: {len(items)}"
     )
 
@@ -256,7 +296,7 @@ def bayesian_score(item, prior_rating):
     ) / (reviews + BAYES_PRIOR_WEIGHT)
 
 
-def rank_items(source_items):
+def rank_by_bayesian(source_items):
     if len(source_items) < RANKING_SIZE:
         raise RuntimeError(
             "ランキング候補が10件未満のため更新を中止します。"
@@ -275,6 +315,22 @@ def rank_items(source_items):
     )
 
     return ranked[:RANKING_SIZE], prior_rating
+
+
+def rank_by_review_count(source_items):
+    if len(source_items) < RANKING_SIZE:
+        raise RuntimeError(
+            "レビュー件数ランキング候補が10件未満です。"
+        )
+
+    return sorted(
+        source_items,
+        key=lambda item: (
+            to_int(item.get("reviewCount")),
+            to_float(item.get("reviewAverage")),
+        ),
+        reverse=True,
+    )[:RANKING_SIZE]
 
 
 def build_cards(ranking_items):
@@ -360,7 +416,7 @@ if len(filtered) < RANKING_SIZE:
         f" 候補件数: {len(filtered)}"
     )
 
-ranking_items, prior_rating = rank_items(filtered)
+ranking_items, prior_rating = rank_by_bayesian(filtered)
 
 under_5000_filtered = [
     item
@@ -375,18 +431,20 @@ if len(under_5000_filtered) < RANKING_SIZE:
         f" 候補件数: {len(under_5000_filtered)}"
     )
 
-under_5000_ranking_items, under_5000_prior_rating = rank_items(
+under_5000_ranking_items, under_5000_prior_rating = rank_by_bayesian(
     under_5000_filtered
 )
+
+most_reviewed_ranking_items = rank_by_review_count(filtered)
 
 
 # =========================================================
 # HTML生成
 # =========================================================
 
-updated = datetime.now(
-    timezone(timedelta(hours=9))
-).strftime("%Y年%m月%d日 %H:%M")
+now_jst = datetime.now(timezone(timedelta(hours=9)))
+updated = now_jst.strftime("%Y年%m月%d日 %H:%M")
+lastmod = now_jst.strftime("%Y-%m-%d")
 
 PAGE_TEMPLATE = Template(
     """<!doctype html>
@@ -523,6 +581,7 @@ footer {
 <nav class="ranking-nav" aria-label="イヤホンランキング">
     <a href="/">高評価ランキング</a>
     <a href="/earphones/under-5000/">5,000円以下</a>
+    <a href="/earphones/most-reviewed/">レビュー件数</a>
 </nav>
 <main>
     <div class="notice">
@@ -595,7 +654,8 @@ page_html = build_page(
         "毎日自動比較しています。"
     ),
     ranking_description=(
-        "レビュー10件以上の商品を対象に、候補商品の平均評価を基準に"
+        "レビュー件数順とレビュー評価順の取得結果を統合し、"
+        "レビュー10件以上の商品を対象に候補商品の平均評価を基準として"
         "ベイズ補正を行い、評価の高さとレビュー件数の信頼度を"
         "両方反映して順位を決定しています。"
     ),
@@ -627,6 +687,30 @@ under_5000_page_html = build_page(
     ranking_items=under_5000_ranking_items,
 )
 
+most_reviewed_page_html = build_page(
+    title=(
+        "楽天でレビュー件数が多いイヤホンランキング｜毎日自動更新"
+    ),
+    meta_description=(
+        "楽天市場のイヤホンをレビュー件数が多い順に毎日自動比較。"
+        "レビュー10件以上・販売中の商品を対象にランキング表示します。"
+    ),
+    canonical_url=(
+        "https://otoku-ranking.pages.dev/earphones/most-reviewed/"
+    ),
+    h1="イヤホン レビュー件数ランキング",
+    header_description=(
+        "楽天市場の商品データから、レビュー件数が多いイヤホンを"
+        "毎日自動集計しています。"
+    ),
+    ranking_description=(
+        "イヤホン判定とデータ検証を通過した商品を、レビュー件数の"
+        "多い順に掲載しています。同数の場合はレビュー評価を"
+        "補助指標として順位を決定します。"
+    ),
+    ranking_items=most_reviewed_ranking_items,
+)
+
 if any(
     to_int(item.get("itemPrice")) > UNDER_5000_MAX_PRICE
     for item in under_5000_ranking_items
@@ -634,6 +718,32 @@ if any(
     raise RuntimeError(
         "5,000円以下ランキングに5,000円超の商品が含まれています。"
     )
+
+review_counts = [
+    to_int(item.get("reviewCount"))
+    for item in most_reviewed_ranking_items
+]
+if review_counts != sorted(review_counts, reverse=True):
+    raise RuntimeError(
+        "レビュー件数ランキングの並び順が不正です。"
+    )
+
+sitemap_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://otoku-ranking.pages.dev/</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+  <url>
+    <loc>https://otoku-ranking.pages.dev/earphones/under-5000/</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+  <url>
+    <loc>https://otoku-ranking.pages.dev/earphones/most-reviewed/</loc>
+    <lastmod>{lastmod}</lastmod>
+  </url>
+</urlset>
+"""
 
 
 # =========================================================
@@ -646,6 +756,11 @@ pages_to_write = [
         "public/earphones/under-5000/index.html",
         under_5000_page_html,
     ),
+    (
+        "public/earphones/most-reviewed/index.html",
+        most_reviewed_page_html,
+    ),
+    ("public/sitemap.xml", sitemap_xml),
 ]
 
 temp_files = []
@@ -668,7 +783,8 @@ for temp_path, final_path in temp_files:
 # =========================================================
 
 print("楽天ランキング生成成功")
-print(f"API取得件数: {len(items)}")
+print(f"API取得件数: {api_item_counts}")
+print(f"重複除外後の商品件数: {len(items)}")
 print(f"イヤホン候補件数: {len(filtered)}")
 print(f"除外件数: {len(excluded_items)}")
 
@@ -685,8 +801,10 @@ print(f"総合ベイズ事前平均: {prior_rating:.4f}")
 print(f"5,000円以下候補件数: {len(under_5000_filtered)}")
 print(f"5,000円以下掲載件数: {len(under_5000_ranking_items)}")
 print(f"5,000円以下ベイズ事前平均: {under_5000_prior_rating:.4f}")
+print(f"レビュー件数ランキング掲載件数: {len(most_reviewed_ranking_items)}")
 print(f"ベイズ事前レビュー数: {BAYES_PRIOR_WEIGHT}")
 print("Genre validation: OK")
 print("Affiliate URL validation: OK")
 print("Fail-safe HTML validation: OK")
-print("public/index.html と 5,000円以下ランキングを更新しました。")
+print("Sitemap generation: OK")
+print("ランキング3ページと sitemap.xml を更新しました。")
