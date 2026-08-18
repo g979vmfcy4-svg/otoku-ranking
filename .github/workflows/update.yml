@@ -1,18 +1,30 @@
-name: Apply Methodology Migration
+name: Update Rakuten Ranking
 
 on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 21 * * *"
+
   push:
     branches:
       - main
     paths:
+      - "generate.py"
       - ".github/workflows/update.yml"
+      - "scripts/inject_methodology_nav.py"
 
 permissions:
   contents: write
 
 jobs:
-  apply-methodology:
+  update-ranking:
     runs-on: ubuntu-latest
+
+    env:
+      RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
 
     steps:
       - name: Checkout repository
@@ -23,17 +35,26 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Apply methodology page and navigation
-        run: python scripts/add_methodology.py
-
       - name: Check Python syntax
-        run: python -m py_compile generate.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py
 
-      - name: Commit methodology migration
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Generate ranking pages
+        run: python generate.py
+
+      - name: Add methodology navigation
+        run: python scripts/inject_methodology_nav.py
+
+      - name: Commit updated pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html
           git diff --cached --quiet && exit 0
-          git commit -m "Add methodology page"
+          git commit -m "Update ranking"
           git push
