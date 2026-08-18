@@ -78,20 +78,66 @@ footer { padding:18px 14px 40px; color:#666; font-size:12px; line-height:1.7; }
 )
 
 workflow_path = Path(".github/workflows/update.yml")
-workflow = workflow_path.read_text(encoding="utf-8")
-workflow = replace_once(
-    workflow,
-    '''      - name: Apply methodology patch\n        run: python scripts/add_methodology.py\n\n      - name: Check Python syntax''',
-    '''      - name: Check Python syntax''',
-    "一時パッチstep削除",
+workflow_path.write_text(
+    '''name: Update Rakuten Ranking
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 21 * * *"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "generate.py"
+      - ".github/workflows/update.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-ranking:
+    runs-on: ubuntu-latest
+
+    env:
+      RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Check Python syntax
+        run: python -m py_compile generate.py
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Generate ranking pages
+        run: python generate.py
+
+      - name: Commit updated pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Update ranking"
+          git push
+''',
+    encoding="utf-8",
 )
-workflow = replace_once(
-    workflow,
-    '''          git add -A''',
-    '''          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html generate.py .github/workflows/update.yml''',
-    "コミット対象固定化",
-)
-workflow_path.write_text(workflow, encoding="utf-8")
 
 Path("scripts/add_methodology.py").unlink()
-print("methodology page and navigation applied")
+print("methodology page and navigation applied; workflow restored")
