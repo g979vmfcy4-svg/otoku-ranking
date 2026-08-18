@@ -1,0 +1,86 @@
+name: Apply Under 10000 Ranking
+
+on:
+  push:
+    branches:
+      - agent/under-10000-ranking
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+
+    env:
+      RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v5
+        with:
+          ref: agent/under-10000-ranking
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Apply source patch
+        run: python scripts/add_under_10000.py
+
+      - name: Syntax check
+        run: python -m py_compile generate.py
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run real ranking generation test
+        run: python generate.py
+
+      - name: Verify generated pages
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path("public/index.html"),
+              Path("public/earphones/under-5000/index.html"),
+              Path("public/earphones/under-10000/index.html"),
+          ]
+
+          for path in paths:
+              text = path.read_text(encoding="utf-8")
+              if text.count('class="card"') != 10:
+                  raise RuntimeError(f"カード件数異常: {path}")
+
+          under_10000 = paths[2].read_text(encoding="utf-8")
+          if "https://otoku-ranking.pages.dev/earphones/under-10000/" not in under_10000:
+              raise RuntimeError("1万円以下ページのcanonicalが不正です。")
+          if "1万円以下 イヤホン高評価ランキング" not in under_10000:
+              raise RuntimeError("1万円以下ページのH1が不正です。")
+
+          print("under-10000 generation validation: OK")
+          PY
+
+      - name: Keep source changes only
+        run: |
+          git restore public/index.html public/earphones/under-5000/index.html
+          rm -f public/earphones/under-10000/index.html
+          rmdir public/earphones/under-10000 2>/dev/null || true
+          rm scripts/add_under_10000.py
+          rm .github/workflows/apply-under-10000.yml
+
+      - name: Commit tested source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A generate.py .github/workflows/update.yml scripts/add_under_10000.py .github/workflows/apply-under-10000.yml
+          git diff --cached --quiet && exit 1
+          git commit -m "Add under 10000 earphone ranking"
+          git push origin agent/under-10000-ranking
