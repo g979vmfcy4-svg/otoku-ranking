@@ -12,6 +12,7 @@ SITE_URL = "https://otoku-ranking.pages.dev/"
 API_URL = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
 SEARCH_KEYWORD = "イヤホン"
 EARPHONE_GENRE_ID = 502835
+
 MIN_REVIEW_COUNT = 10
 RANKING_SIZE = 10
 BAYES_PRIOR_WEIGHT = 100
@@ -257,7 +258,7 @@ def bayesian_score(item, prior_rating):
     ) / (reviews + BAYES_PRIOR_WEIGHT)
 
 
-def rank_items(source_items):
+def rank_by_bayesian(source_items):
     if len(source_items) < RANKING_SIZE:
         raise RuntimeError(
             "ランキング候補が10件未満のため更新を中止します。"
@@ -276,6 +277,35 @@ def rank_items(source_items):
     )
 
     return ranked[:RANKING_SIZE], prior_rating
+
+
+def rank_by_review_count(source_items):
+    if len(source_items) < RANKING_SIZE:
+        raise RuntimeError(
+            "レビュー件数ランキング候補が10件未満のため更新を中止します。"
+            f" 候補件数: {len(source_items)}"
+        )
+
+    ranked = sorted(
+        source_items,
+        key=lambda item: to_int(item.get("reviewCount")),
+        reverse=True,
+    )[:RANKING_SIZE]
+
+    counts = [
+        to_int(item.get("reviewCount"))
+        for item in ranked
+    ]
+
+    if any(
+        current < following
+        for current, following in zip(counts, counts[1:])
+    ):
+        raise RuntimeError(
+            "レビュー件数ランキングの並び順が不正です。"
+        )
+
+    return ranked, counts
 
 
 def build_cards(ranking_items):
@@ -361,22 +391,14 @@ if len(filtered) < RANKING_SIZE:
         f" 候補件数: {len(filtered)}"
     )
 
-ranking_items, prior_rating = rank_items(filtered)
+ranking_items, prior_rating = rank_by_bayesian(filtered)
 
 under_5000_filtered = [
     item
     for item in filtered
     if to_int(item.get("itemPrice")) <= UNDER_5000_MAX_PRICE
 ]
-
-if len(under_5000_filtered) < RANKING_SIZE:
-    raise RuntimeError(
-        "5,000円以下の正常なイヤホン候補が10件未満のため"
-        "更新を中止します。"
-        f" 候補件数: {len(under_5000_filtered)}"
-    )
-
-under_5000_ranking_items, under_5000_prior_rating = rank_items(
+under_5000_ranking_items, under_5000_prior_rating = rank_by_bayesian(
     under_5000_filtered
 )
 
@@ -385,17 +407,29 @@ under_10000_filtered = [
     for item in filtered
     if to_int(item.get("itemPrice")) <= UNDER_10000_MAX_PRICE
 ]
-
-if len(under_10000_filtered) < RANKING_SIZE:
-    raise RuntimeError(
-        "1万円以下の正常なイヤホン候補が10件未満のため"
-        "更新を中止します。"
-        f" 候補件数: {len(under_10000_filtered)}"
-    )
-
-under_10000_ranking_items, under_10000_prior_rating = rank_items(
+under_10000_ranking_items, under_10000_prior_rating = rank_by_bayesian(
     under_10000_filtered
 )
+
+most_reviewed_ranking_items, most_reviewed_counts = rank_by_review_count(
+    filtered
+)
+
+if any(
+    to_int(item.get("itemPrice")) > UNDER_5000_MAX_PRICE
+    for item in under_5000_ranking_items
+):
+    raise RuntimeError(
+        "5,000円以下ランキングに5,000円超の商品が含まれています。"
+    )
+
+if any(
+    to_int(item.get("itemPrice")) > UNDER_10000_MAX_PRICE
+    for item in under_10000_ranking_items
+):
+    raise RuntimeError(
+        "1万円以下ランキングに1万円超の商品が含まれています。"
+    )
 
 
 # =========================================================
@@ -542,6 +576,7 @@ footer {
     <a href="/">高評価ランキング</a>
     <a href="/earphones/under-5000/">5,000円以下</a>
     <a href="/earphones/under-10000/">1万円以下</a>
+    <a href="/earphones/most-reviewed/">レビュー件数順</a>
 </nav>
 <main>
     <div class="notice">
@@ -671,21 +706,30 @@ under_10000_page_html = build_page(
     ranking_items=under_10000_ranking_items,
 )
 
-if any(
-    to_int(item.get("itemPrice")) > UNDER_5000_MAX_PRICE
-    for item in under_5000_ranking_items
-):
-    raise RuntimeError(
-        "5,000円以下ランキングに5,000円超の商品が含まれています。"
-    )
-
-if any(
-    to_int(item.get("itemPrice")) > UNDER_10000_MAX_PRICE
-    for item in under_10000_ranking_items
-):
-    raise RuntimeError(
-        "1万円以下ランキングに1万円超の商品が含まれています。"
-    )
+most_reviewed_page_html = build_page(
+    title=(
+        "レビューが多いイヤホンランキング｜"
+        "楽天レビュー件数を毎日比較"
+    ),
+    meta_description=(
+        "楽天市場のイヤホンをレビュー件数が多い順に毎日自動比較。"
+        "イヤホン本体だけを対象にレビュー件数TOP10を掲載します。"
+    ),
+    canonical_url=(
+        "https://otoku-ranking.pages.dev/earphones/most-reviewed/"
+    ),
+    h1="レビュー件数が多い イヤホンランキング",
+    header_description=(
+        "楽天市場の商品データからイヤホン本体だけを抽出し、"
+        "レビュー件数が多い順に毎日ランキングしています。"
+    ),
+    ranking_description=(
+        "レビュー10件以上のイヤホンを対象に、楽天の商品データの"
+        "レビュー件数が多い順で掲載しています。評価点は表示しますが、"
+        "このランキングの順位計算には使用していません。"
+    ),
+    ranking_items=most_reviewed_ranking_items,
+)
 
 
 # =========================================================
@@ -702,17 +746,32 @@ pages_to_write = [
         "public/earphones/under-10000/index.html",
         under_10000_page_html,
     ),
+    (
+        "public/earphones/most-reviewed/index.html",
+        most_reviewed_page_html,
+    ),
 ]
 
+# 全ページを検証してから一括で置換する。
+for final_path, page_content in pages_to_write:
+    if (
+        "<html" not in page_content
+        or "</html>" not in page_content
+        or page_content.count('class="card"') != RANKING_SIZE
+    ):
+        raise RuntimeError(
+            f"生成HTMLの最終検証に失敗しました: {final_path}"
+        )
+
 temp_files = []
-for final_path, content in pages_to_write:
+for final_path, page_content in pages_to_write:
     directory = os.path.dirname(final_path)
     if directory:
         os.makedirs(directory, exist_ok=True)
 
     temp_path = final_path + ".tmp"
     with open(temp_path, "w", encoding="utf-8") as f:
-        f.write(content)
+        f.write(page_content)
     temp_files.append((temp_path, final_path))
 
 for temp_path, final_path in temp_files:
@@ -744,8 +803,10 @@ print(f"5,000円以下ベイズ事前平均: {under_5000_prior_rating:.4f}")
 print(f"1万円以下候補件数: {len(under_10000_filtered)}")
 print(f"1万円以下掲載件数: {len(under_10000_ranking_items)}")
 print(f"1万円以下ベイズ事前平均: {under_10000_prior_rating:.4f}")
+print(f"レビュー件数順掲載件数: {len(most_reviewed_ranking_items)}")
+print(f"レビュー件数最多: {most_reviewed_counts[0]:,}件")
 print(f"ベイズ事前レビュー数: {BAYES_PRIOR_WEIGHT}")
 print("Genre validation: OK")
 print("Affiliate URL validation: OK")
 print("Fail-safe HTML validation: OK")
-print("総合・5,000円以下・1万円以下ランキングを更新しました。")
+print("総合・5,000円以下・1万円以下・レビュー件数順ランキングを更新しました。")
