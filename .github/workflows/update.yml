@@ -34,6 +34,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Apply methodology patch
+        run: python scripts/add_methodology.py
+
       - name: Check Python syntax
         run: python -m py_compile generate.py
 
@@ -50,7 +53,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html
+          git add -A
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
           git push
