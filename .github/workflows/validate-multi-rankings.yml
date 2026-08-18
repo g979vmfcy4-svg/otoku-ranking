@@ -1,0 +1,127 @@
+name: Validate Multi Rankings
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    env:
+      RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
+      RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
+      RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Syntax check
+        run: python -m py_compile generate.py
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run real ranking generation
+        run: python generate.py
+
+      - name: Validate generated output
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+
+          paths = {
+              "root": Path("public/index.html"),
+              "under5000": Path("public/earphones/under-5000/index.html"),
+              "reviewed": Path("public/earphones/most-reviewed/index.html"),
+              "sitemap": Path("public/sitemap.xml"),
+          }
+
+          for name, path in paths.items():
+              if not path.exists():
+                  raise RuntimeError(f"missing: {name} {path}")
+
+          root = paths["root"].read_text(encoding="utf-8")
+          under = paths["under5000"].read_text(encoding="utf-8")
+          reviewed = paths["reviewed"].read_text(encoding="utf-8")
+
+          for name, text in {
+              "root": root,
+              "under5000": under,
+              "reviewed": reviewed,
+          }.items():
+              if text.count('class="card"') != 10:
+                  raise RuntimeError(f"{name}: card count is not 10")
+              if "hb.afl.rakuten.co.jp" not in text:
+                  raise RuntimeError(f"{name}: affiliate links missing")
+
+          prices = [
+              int(v.replace(",", ""))
+              for v in re.findall(
+                  r'class="price">\s*([0-9,]+)円',
+                  under,
+              )
+          ]
+          if len(prices) != 10 or any(p > 5000 for p in prices):
+              raise RuntimeError(f"under5000 prices invalid: {prices}")
+
+          review_counts = [
+              int(v.replace(",", ""))
+              for v in re.findall(
+                  r'<span>\(([0-9,]+)件\)</span>',
+                  reviewed,
+              )
+          ]
+          if len(review_counts) != 10:
+              raise RuntimeError(
+                  f"review count extraction invalid: {review_counts}"
+              )
+          if review_counts != sorted(review_counts, reverse=True):
+              raise RuntimeError(
+                  f"review ranking order invalid: {review_counts}"
+              )
+
+          if 'href="/earphones/most-reviewed/"' not in root:
+              raise RuntimeError("most-reviewed internal link missing")
+
+          if (
+              "https://otoku-ranking.pages.dev/earphones/most-reviewed/"
+              not in reviewed
+          ):
+              raise RuntimeError("most-reviewed canonical missing")
+
+          tree = ET.parse(paths["sitemap"])
+          root_xml = tree.getroot()
+          ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+          locs = [
+              node.text
+              for node in root_xml.findall("s:url/s:loc", ns)
+          ]
+          expected = {
+              "https://otoku-ranking.pages.dev/",
+              "https://otoku-ranking.pages.dev/earphones/under-5000/",
+              "https://otoku-ranking.pages.dev/earphones/most-reviewed/",
+          }
+          if set(locs) != expected:
+              raise RuntimeError(f"sitemap URLs invalid: {locs}")
+
+          print("Validation OK")
+          print("under5000 prices:", prices)
+          print("review counts:", review_counts)
+          print("sitemap URLs:", locs)
+          PY
