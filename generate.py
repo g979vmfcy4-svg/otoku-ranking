@@ -1,7 +1,6 @@
 import os
 import json
 import html
-import math
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from string import Template
@@ -20,6 +19,7 @@ EARPHONE_GENRE_ID = 502835
 
 MIN_REVIEW_COUNT = 10
 RANKING_SIZE = 10
+BAYES_PRIOR_WEIGHT = 100
 
 
 GOOGLE_SITE_VERIFICATION = (
@@ -648,35 +648,36 @@ def get_rejection_reason(
 
 
 # =========================================================
-# ランキングスコア
-#
-# 今回は既存ロジックを変更しない
+# ベイズ補正ランキングスコア
 # =========================================================
 
 def score(
-    item
+    item,
+    prior_rating,
 ):
 
     rating = to_float(
         item.get(
-            "reviewAverage"
+  "reviewAverage"
         )
     )
 
 
     reviews = to_int(
         item.get(
-            "reviewCount"
+  "reviewCount"
         )
     )
 
 
     return (
-        rating * 20
+        reviews * rating
         +
-        math.log10(
-            reviews + 1
-        ) * 8
+        BAYES_PRIOR_WEIGHT * prior_rating
+    ) / (
+        reviews
+        +
+        BAYES_PRIOR_WEIGHT
     )
 
 
@@ -757,11 +758,34 @@ if len(
 
 
 # =========================================================
+# ベイズ補正用の基準評価
+#
+# 候補商品の平均レビュー評価を基準にして、
+# レビュー件数が少ない商品の高評価を過大評価しにくくする。
+# =========================================================
+
+prior_rating = (
+    sum(
+        to_float(
+  item.get(
+      "reviewAverage"
+  )
+        )
+        for item in filtered
+    )
+    / len(filtered)
+)
+
+
+# =========================================================
 # ランキング作成
 # =========================================================
 
 filtered.sort(
-    key=score,
+    key=lambda item: score(
+        item,
+        prior_rating,
+    ),
     reverse=True,
 )
 
@@ -1472,9 +1496,9 @@ footer {
 
 
         レビュー10件以上の商品を対象に、
-        評価の高さだけでなく
-        レビュー件数も加味して
-        順位を決定しています。
+        候補商品の平均評価を基準にベイズ補正を行い、
+        評価の高さとレビュー件数の信頼度を
+        両方反映して順位を決定しています。
 
 
     </div>
@@ -1666,6 +1690,23 @@ if excluded_items:
 print(
     f"掲載件数: "
     f"{len(ranking_items)}"
+)
+
+
+print(
+    f"ベイズ事前平均: "
+    f"{prior_rating:.4f}"
+)
+
+
+print(
+    f"ベイズ事前レビュー数: "
+    f"{BAYES_PRIOR_WEIGHT}"
+)
+
+
+print(
+    "Bayesian ranking: OK"
 )
 
 
