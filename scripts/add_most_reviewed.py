@@ -197,12 +197,38 @@ generate_path.write_text(text, encoding="utf-8")
 
 workflow_path = Path(".github/workflows/update.yml")
 workflow = workflow_path.read_text(encoding="utf-8")
+
 workflow = replace_once(
     workflow,
-    "git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html",
-    "git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html",
-    "GitHub Actionsのコミット対象追加",
+    '''      - "generate.py"
+      - ".github/workflows/update.yml"
+      - "scripts/add_most_reviewed.py"
+''',
+    '''      - "generate.py"
+      - ".github/workflows/update.yml"
+''',
+    "一時パッチ用path filter削除",
 )
+
+workflow = replace_once(
+    workflow,
+    '''      - name: Apply most reviewed patch
+        run: python scripts/add_most_reviewed.py
+
+''',
+    "",
+    "一時パッチstep削除",
+)
+
+workflow = replace_once(
+    workflow,
+    "          git add -A",
+    "          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html",
+    "GitHub Actionsのコミット対象確定",
+)
+
 workflow_path.write_text(workflow, encoding="utf-8")
 
-print("most-reviewed patch applied")
+Path("scripts/add_most_reviewed.py").unlink()
+
+print("most-reviewed patch applied and migration cleaned up")
