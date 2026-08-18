@@ -658,14 +658,14 @@ def score(
 
     rating = to_float(
         item.get(
-  "reviewAverage"
+            "reviewAverage"
         )
     )
 
 
     reviews = to_int(
         item.get(
-  "reviewCount"
+            "reviewCount"
         )
     )
 
@@ -767,9 +767,9 @@ if len(
 prior_rating = (
     sum(
         to_float(
-  item.get(
-      "reviewAverage"
-  )
+            item.get(
+                "reviewAverage"
+            )
         )
         for item in filtered
     )
