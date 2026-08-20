@@ -14,7 +14,9 @@ on:
       - ".github/workflows/update.yml"
       - "scripts/inject_methodology_nav.py"
       - "scripts/enhance_page_quality.py"
+      - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
+      - "public/assets/analytics.js"
 
 permissions:
   contents: write
@@ -38,7 +40,7 @@ jobs:
           python-version: "3.13"
 
       - name: Check Python syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/inject_analytics.py
 
       - name: Install Playwright
         run: |
@@ -54,6 +56,9 @@ jobs:
 
       - name: Enhance page quality
         run: python scripts/enhance_page_quality.py
+
+      - name: Add analytics tracking
+        run: python scripts/inject_analytics.py
 
       - name: Commit updated pages
         run: |
