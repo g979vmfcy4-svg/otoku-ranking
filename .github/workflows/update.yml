@@ -15,10 +15,14 @@ on:
       - "scripts/inject_methodology_nav.py"
       - "scripts/enhance_page_quality.py"
       - "scripts/generate_price_bands.py"
+      - "scripts/generate_category_pages.py"
       - "scripts/update_price_band_copy.py"
+      - "scripts/enhance_seo_structure.py"
       - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
+      - "public/assets/seo-expansion.css"
       - "public/assets/analytics.js"
+      - "public/earphones/index.html"
 
 permissions:
   contents: write
@@ -42,7 +46,7 @@ jobs:
           python-version: "3.13"
 
       - name: Check Python syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/update_price_band_copy.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/inject_analytics.py
 
       - name: Install Playwright
         run: |
@@ -56,6 +60,9 @@ jobs:
       - name: Generate non-overlapping price bands
         run: python scripts/generate_price_bands.py
 
+      - name: Generate category ranking pages
+        run: python scripts/generate_category_pages.py
+
       - name: Add site navigation and SEO
         run: python scripts/inject_methodology_nav.py
 
@@ -65,6 +72,9 @@ jobs:
       - name: Update price band copy
         run: python scripts/update_price_band_copy.py
 
+      - name: Add SEO structure and sitemap
+        run: python scripts/enhance_seo_structure.py
+
       - name: Add analytics tracking
         run: python scripts/inject_analytics.py
 
@@ -72,7 +82,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html public/about/index.html
+          git add public/index.html public/earphones/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/wireless/index.html public/earphones/wired/index.html public/earphones/earcuff/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html public/about/index.html public/sitemap.xml
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
           git push

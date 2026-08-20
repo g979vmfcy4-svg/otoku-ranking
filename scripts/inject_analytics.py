@@ -3,8 +3,12 @@ from pathlib import Path
 
 PAGES = [
     Path("public/index.html"),
+    Path("public/earphones/index.html"),
     Path("public/earphones/under-5000/index.html"),
     Path("public/earphones/under-10000/index.html"),
+    Path("public/earphones/wireless/index.html"),
+    Path("public/earphones/wired/index.html"),
+    Path("public/earphones/earcuff/index.html"),
     Path("public/earphones/most-reviewed/index.html"),
     Path("public/earphones/methodology/index.html"),
     Path("public/about/index.html"),
