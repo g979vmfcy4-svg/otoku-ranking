@@ -1,0 +1,13 @@
+workflow_failure=2026-08-20T08:11:38Z
+syntax=success
+playwright=success
+base_ranking=success
+price_bands=success
+categories=failure
+navigation=skipped
+quality=skipped
+price_copy=skipped
+seo_structure=skipped
+final_names=skipped
+analytics=skipped
+commit_pages=skipped
