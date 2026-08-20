@@ -14,7 +14,7 @@ on:
       - ".github/workflows/update.yml"
       - "scripts/inject_methodology_nav.py"
       - "scripts/enhance_page_quality.py"
-      - "scripts/generate_mid_price_band.py"
+      - "scripts/generate_price_bands.py"
       - "scripts/update_price_band_copy.py"
       - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
@@ -42,7 +42,7 @@ jobs:
           python-version: "3.13"
 
       - name: Check Python syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_mid_price_band.py scripts/update_price_band_copy.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/update_price_band_copy.py scripts/inject_analytics.py
 
       - name: Install Playwright
         run: |
@@ -53,8 +53,8 @@ jobs:
       - name: Generate ranking pages
         run: python generate.py
 
-      - name: Generate 5,001-10,000 yen ranking
-        run: python scripts/generate_mid_price_band.py
+      - name: Generate non-overlapping price bands
+        run: python scripts/generate_price_bands.py
 
       - name: Add site navigation and SEO
         run: python scripts/inject_methodology_nav.py
