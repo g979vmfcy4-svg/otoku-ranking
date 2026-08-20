@@ -20,12 +20,12 @@ PAGE_SETTINGS = {
         "h1": "5,000円以下のイヤホン高評価ランキング",
     },
     Path("public/earphones/under-10000/index.html"): {
-        "title": "1万円以下のイヤホン高評価ランキング｜楽天市場TOP10",
+        "title": "5,001〜10,000円のイヤホン高評価ランキング｜楽天市場TOP10",
         "description": (
-            "楽天市場の1万円以下のイヤホンを、レビュー平均とレビュー件数の"
+            "楽天市場の5,001〜10,000円のイヤホンを、レビュー平均とレビュー件数の"
             "信頼度を補正して毎日比較。高評価TOP10を掲載しています。"
         ),
-        "h1": "1万円以下のイヤホン高評価ランキング",
+        "h1": "5,001〜10,000円のイヤホン高評価ランキング",
     },
     Path("public/earphones/most-reviewed/index.html"): {
         "title": "レビュー件数が多いイヤホンランキング｜楽天市場TOP10",
@@ -56,7 +56,7 @@ PAGE_SETTINGS = {
 NAV_HTML = """<nav class="ranking-nav" aria-label="イヤホンランキング">
     <a href="/">イヤホン高評価</a>
     <a href="/earphones/under-5000/">5,000円以下イヤホン</a>
-    <a href="/earphones/under-10000/">1万円以下イヤホン</a>
+    <a href="/earphones/under-10000/">5,001〜10,000円イヤホン</a>
     <a href="/earphones/most-reviewed/">レビュー件数順</a>
     <a href="/earphones/methodology/">ランキング基準</a>
     <a href="/about/">このサイトについて</a>
