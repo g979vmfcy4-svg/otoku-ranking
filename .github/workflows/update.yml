@@ -47,42 +47,54 @@ jobs:
           python-version: "3.13"
 
       - name: Check Python syntax
+        id: syntax
         run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/inject_analytics.py
 
       - name: Install Playwright
+        id: playwright
         run: |
           python -m pip install --upgrade pip
           pip install playwright
           python -m playwright install --with-deps chromium
 
       - name: Generate ranking pages
+        id: base_ranking
         run: python generate.py
 
       - name: Generate non-overlapping price bands
+        id: price_bands
         run: python scripts/generate_price_bands.py
 
       - name: Generate category ranking pages
+        id: categories
         run: python scripts/generate_category_pages.py
 
       - name: Add site navigation and SEO
+        id: navigation
         run: python scripts/inject_methodology_nav.py
 
       - name: Enhance page quality
+        id: quality
         run: python scripts/enhance_page_quality.py
 
       - name: Update price band copy
+        id: price_copy
         run: python scripts/update_price_band_copy.py
 
       - name: Add SEO structure and sitemap
+        id: seo_structure
         run: python scripts/enhance_seo_structure.py
 
       - name: Finalize category product names
+        id: final_names
         run: python scripts/finalize_category_names.py
 
       - name: Add analytics tracking
+        id: analytics
         run: python scripts/inject_analytics.py
 
       - name: Commit updated pages
+        id: commit_pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -90,3 +102,27 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
           git push
+
+      - name: Record failed stage privately
+        if: failure()
+        run: |
+          {
+            echo "workflow_failure=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "syntax=${{ steps.syntax.outcome }}"
+            echo "playwright=${{ steps.playwright.outcome }}"
+            echo "base_ranking=${{ steps.base_ranking.outcome }}"
+            echo "price_bands=${{ steps.price_bands.outcome }}"
+            echo "categories=${{ steps.categories.outcome }}"
+            echo "navigation=${{ steps.navigation.outcome }}"
+            echo "quality=${{ steps.quality.outcome }}"
+            echo "price_copy=${{ steps.price_copy.outcome }}"
+            echo "seo_structure=${{ steps.seo_structure.outcome }}"
+            echo "final_names=${{ steps.final_names.outcome }}"
+            echo "analytics=${{ steps.analytics.outcome }}"
+            echo "commit_pages=${{ steps.commit_pages.outcome }}"
+          } > .github/last-workflow-failure.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last-workflow-failure.txt
+          git commit -m "Record ranking workflow failure" || exit 0
+          git push || true
