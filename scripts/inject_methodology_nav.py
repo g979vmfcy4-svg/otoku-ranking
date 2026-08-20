@@ -11,6 +11,14 @@ PAGE_SETTINGS = {
         ),
         "h1": "楽天市場 イヤホン高評価ランキング",
     },
+    Path("public/earphones/index.html"): {
+        "title": "イヤホンランキング一覧｜価格・種類・レビューで楽天市場を比較",
+        "description": (
+            "楽天市場のイヤホンを、総合・価格帯・ワイヤレス・有線・イヤーカフ・"
+            "レビュー件数など複数の軸から比較できるランキング一覧です。"
+        ),
+        "h1": "楽天市場 イヤホンランキング一覧",
+    },
     Path("public/earphones/under-5000/index.html"): {
         "title": "5,000円以下のイヤホン高評価ランキング｜楽天市場TOP10",
         "description": (
@@ -27,6 +35,30 @@ PAGE_SETTINGS = {
         ),
         "h1": "5,001〜10,000円のイヤホン高評価ランキング",
     },
+    Path("public/earphones/wireless/index.html"): {
+        "title": "ワイヤレスイヤホン高評価ランキング｜楽天市場TOP10",
+        "description": (
+            "楽天市場のワイヤレスイヤホンをレビュー平均とレビュー件数の信頼度を"
+            "補正して毎日比較。高評価TOP10と独自集計データを掲載しています。"
+        ),
+        "h1": "楽天市場 ワイヤレスイヤホン高評価ランキング",
+    },
+    Path("public/earphones/wired/index.html"): {
+        "title": "有線イヤホン高評価ランキング｜楽天市場TOP10",
+        "description": (
+            "楽天市場の有線イヤホンをレビュー平均とレビュー件数の信頼度を補正して"
+            "毎日比較。高評価TOP10と独自集計データを掲載しています。"
+        ),
+        "h1": "楽天市場 有線イヤホン高評価ランキング",
+    },
+    Path("public/earphones/earcuff/index.html"): {
+        "title": "イヤーカフ型イヤホン高評価ランキング｜楽天市場TOP10",
+        "description": (
+            "楽天市場のイヤーカフ型イヤホンをレビュー平均とレビュー件数の信頼度を"
+            "補正して毎日比較。高評価TOP10と独自集計データを掲載しています。"
+        ),
+        "h1": "楽天市場 イヤーカフ型イヤホン高評価ランキング",
+    },
     Path("public/earphones/most-reviewed/index.html"): {
         "title": "レビュー件数が多いイヤホンランキング｜楽天市場TOP10",
         "description": (
@@ -38,8 +70,8 @@ PAGE_SETTINGS = {
     Path("public/earphones/methodology/index.html"): {
         "title": "イヤホンランキングの決め方｜評価基準・ベイズ補正・除外条件",
         "description": (
-            "楽天市場のイヤホンランキングで使う評価基準、ベイズ補正、"
-            "価格帯ランキング、レビュー件数順、商品除外条件、更新方法を公開しています。"
+            "楽天市場のイヤホンランキングで使う評価基準、ベイズ補正、価格帯・"
+            "種類別ランキング、レビュー件数順、商品除外条件、更新方法を公開しています。"
         ),
         "h1": "イヤホンランキングの決め方",
     },
@@ -54,9 +86,13 @@ PAGE_SETTINGS = {
 }
 
 NAV_HTML = """<nav class="ranking-nav" aria-label="イヤホンランキング">
-    <a href="/">イヤホン高評価</a>
-    <a href="/earphones/under-5000/">5,000円以下イヤホン</a>
-    <a href="/earphones/under-10000/">5,001〜10,000円イヤホン</a>
+    <a href="/earphones/">ランキング一覧</a>
+    <a href="/">総合</a>
+    <a href="/earphones/under-5000/">5,000円以下</a>
+    <a href="/earphones/under-10000/">5千〜1万円</a>
+    <a href="/earphones/wireless/">ワイヤレス</a>
+    <a href="/earphones/wired/">有線</a>
+    <a href="/earphones/earcuff/">イヤーカフ</a>
     <a href="/earphones/most-reviewed/">レビュー件数順</a>
     <a href="/earphones/methodology/">ランキング基準</a>
     <a href="/about/">このサイトについて</a>
@@ -86,6 +122,9 @@ def replace_single(pattern, replacement, text, label):
 
 
 for path, settings in PAGE_SETTINGS.items():
+    if not path.exists():
+        raise RuntimeError(f"SEO対象ページが見つかりません: {path}")
+
     text = path.read_text(encoding="utf-8")
 
     text = replace_single(
