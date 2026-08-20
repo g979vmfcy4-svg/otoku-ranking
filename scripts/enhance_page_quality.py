@@ -138,47 +138,6 @@ def build_quick_card(item, label, reason):
 </article>'''
 
 
-def build_comparison_table(items):
-    rows = []
-
-    for item in items:
-        rows.append(
-            f'''<tr>
-    <td class="compare-rank">{item["rank"]}</td>
-    <td class="compare-product" title="{escape_text(item["name"])}">
-        {escape_text(shorten(item["name"], 54))}
-        <small>{escape_text(shorten(item["shop"], 30))}</small>
-    </td>
-    <td>★ {item["rating"]:.2f}</td>
-    <td>{item["reviews"]:,}件</td>
-    <td><strong>{item["price"]:,}円</strong></td>
-    <td><a class="table-button" href="{item["link"]}" target="_blank"
-           rel="nofollow sponsored noopener">詳細</a></td>
-</tr>'''
-        )
-
-    return f'''<section class="quality-section compare-section" id="comparison">
-    <div class="section-head">
-        <div>
-            <span class="section-kicker">一覧比較</span>
-            <h2>高評価イヤホンTOP10を比較</h2>
-            <p>評価・レビュー件数・価格をまとめて確認できます。</p>
-        </div>
-    </div>
-    <div class="compare-wrap">
-        <table class="compare-table">
-            <thead>
-                <tr>
-                    <th>順位</th><th>商品</th><th>評価</th>
-                    <th>レビュー</th><th>価格</th><th>楽天</th>
-                </tr>
-            </thead>
-            <tbody>{"".join(rows)}</tbody>
-        </table>
-    </div>
-</section>'''
-
-
 # 毎日の生成後に、4ランキングへ共通デザインとCTA文言を適用する。
 for path in RANKING_PATHS:
     text = path.read_text(encoding="utf-8")
@@ -264,7 +223,7 @@ quick_html = f'''<section class="quality-section quick-section" id="quick-picks"
             <h2>迷ったらこの3台</h2>
             <p>総合・予算・レビュー件数の3つの軸から、候補をすぐ選べます。</p>
         </div>
-        <a class="jump-link" href="#comparison">TOP10を比較 →</a>
+        <a class="jump-link" href="#ranking">総合ランキングを見る →</a>
     </div>
     <div class="quick-grid">
         {build_quick_card(overall_pick, f"総合 {overall_pick['rank']}位", "評価とレビュー件数を総合して上位になった候補です。")}
@@ -291,7 +250,7 @@ purpose_html = '''<section class="purpose-section" aria-label="目的別ラン�
     </a>
 </section>'''
 
-ranking_head = '''<div class="ranking-list-head">
+ranking_head = '''<div class="ranking-list-head" id="ranking">
     <span class="section-kicker">詳しく見る</span>
     <h2>総合ランキングTOP10</h2>
     <p>各商品の評価・レビュー件数・価格を確認して、気になる商品は楽天市場で最新情報を確認できます。</p>
@@ -303,8 +262,6 @@ top_sections = (
     + quick_html
     + "\n"
     + purpose_html
-    + "\n"
-    + build_comparison_table(top_items)
     + "\n"
     + ranking_head
 )
@@ -358,10 +315,10 @@ if top_text.count('class="card"') != 10:
     raise RuntimeError("V3化後の総合ランキング商品カードが10件ではありません。")
 if top_text.count('class="quick-card"') != 3:
     raise RuntimeError("迷ったらこの3台が3件ではありません。")
-if top_text.count("<tr>") != 11:
-    raise RuntimeError("TOP10比較表の行数が想定外です。")
 if top_text.count('class="purpose-icon"') != 3:
     raise RuntimeError("目的別導線が3件ではありません。")
+if 'class="compare-section"' in top_text or '<table class="compare-table">' in top_text:
+    raise RuntimeError("不要な一覧比較が残っています。")
 if 'class="guide-grid"' in top_text:
     raise RuntimeError("旧『このランキングの見方』が残っています。")
 if top_text.count("hb.afl.rakuten.co.jp") < 10:
