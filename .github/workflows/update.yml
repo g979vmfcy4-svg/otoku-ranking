@@ -13,6 +13,8 @@ on:
       - "generate.py"
       - ".github/workflows/update.yml"
       - "scripts/inject_methodology_nav.py"
+      - "scripts/enhance_page_quality.py"
+      - "public/assets/site-v2.css"
 
 permissions:
   contents: write
@@ -36,7 +38,7 @@ jobs:
           python-version: "3.13"
 
       - name: Check Python syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py
 
       - name: Install Playwright
         run: |
@@ -47,8 +49,11 @@ jobs:
       - name: Generate ranking pages
         run: python generate.py
 
-      - name: Add site navigation
+      - name: Add site navigation and SEO
         run: python scripts/inject_methodology_nav.py
+
+      - name: Enhance page quality
+        run: python scripts/enhance_page_quality.py
 
       - name: Commit updated pages
         run: |
