@@ -67,7 +67,20 @@ jobs:
 
       - name: Generate category ranking pages
         id: categories
-        run: python scripts/generate_category_pages.py
+        shell: bash
+        run: |
+          set -o pipefail
+          : > /tmp/category-generation.log
+          for attempt in 1 2 3; do
+            echo "Category generation attempt ${attempt}/3" | tee -a /tmp/category-generation.log
+            if python scripts/generate_category_pages.py 2>&1 | tee -a /tmp/category-generation.log; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+          exit 1
 
       - name: Add site navigation and SEO
         id: navigation
@@ -98,7 +111,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/last-workflow-failure.txt
           git add public/index.html public/earphones/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/wireless/index.html public/earphones/wired/index.html public/earphones/earcuff/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html public/about/index.html public/sitemap.xml
+          git add -u .github/last-workflow-failure.txt || true
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
           git push
@@ -120,6 +135,11 @@ jobs:
             echo "final_names=${{ steps.final_names.outcome }}"
             echo "analytics=${{ steps.analytics.outcome }}"
             echo "commit_pages=${{ steps.commit_pages.outcome }}"
+            if [ -f /tmp/category-generation.log ]; then
+              echo ""
+              echo "--- category generation tail ---"
+              tail -n 80 /tmp/category-generation.log
+            fi
           } > .github/last-workflow-failure.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
