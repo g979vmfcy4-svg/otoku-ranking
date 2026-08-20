@@ -46,6 +46,106 @@ def escape_text(value):
     return html_lib.escape(str(value), quote=True)
 
 
+def display_name(raw_name):
+    """楽天掲載名は保持したまま、画面表示用の短い商品名を作る。"""
+    original = " ".join(raw_name.split())
+    value = original
+
+    promo_patterns = [
+        r'^(?:楽天ランキング\d*位|楽天\d*位|迷ったらこれ[！!]?|20\d{2}年間MVP|総合ランキング\d*部門\d*位受賞)[\s・:：-]*',
+        r'^[★☆]+[^★☆]{0,50}[★☆]+\s*',
+        r'^＼[^／]{0,120}／\s*',
+        r'^【[^】]{0,120}(?:OFF|クーポン|ポイント|楽天|P\d|エントリー|ランキング|セール|限定)[^】]*】\s*',
+        r'^「[^」]{0,120}(?:OFF|クーポン|ポイント|楽天|実質|ランキング)[^」]*」\s*',
+    ]
+
+    changed = True
+    while changed:
+        changed = False
+        for pattern in promo_patterns:
+            cleaned = re.sub(pattern, "", value, count=1, flags=re.IGNORECASE)
+            if cleaned != value:
+                value = cleaned.strip()
+                changed = True
+
+    value = re.sub(r'^[★☆＼／!！\s]+', "", value).strip()
+
+    # 商品種別を探すための文字列では、販促用の角括弧説明をいったん外す。
+    parsed = re.sub(r'【[^】]{0,120}】', " ", value)
+    parsed = " ".join(parsed.split())
+
+    bluetooth_pattern = r'Bluetooth\s*(?:ver\.?\s*)?([4-6](?:\.\d+)?)'
+    earphone_type = (
+        r'(完全ワイヤレスイヤホン|ワイヤレスイヤホン|有線\s*イヤホン|'
+        r'骨伝導イヤホン|ステレオイヤホン|イヤホン)'
+    )
+
+    # 型番が明確な代表的な書式は、型番まで残す。
+    if re.search(r'パナソニック', parsed, re.IGNORECASE):
+        model = re.search(r'\b(RP-[A-Z0-9-]+)\b', parsed, re.IGNORECASE)
+        if model:
+            return f"パナソニック {model.group(1).upper()} 有線イヤホン"
+
+    anker = re.search(
+        r'\b(Anker\s+Soundcore\s+[A-Za-z0-9-]+)',
+        parsed,
+        re.IGNORECASE,
+    )
+    if anker:
+        return f"{anker.group(1)} ワイヤレスイヤホン"
+
+    # 英字ブランド名・型番が商品種別の直前にある場合は、その部分を優先する。
+    branded = re.match(
+        rf'^([A-Za-z][A-Za-z0-9.+_-]*(?:\s+[A-Za-z0-9][A-Za-z0-9.+_-]*){{0,2}})'
+        rf'(?:\s+公式)?\s+{earphone_type}',
+        parsed,
+        re.IGNORECASE,
+    )
+    if branded:
+        prefix = " ".join(branded.group(1).split())
+        kind = re.sub(r'\s+', "", branded.group(2))
+        if kind == "完全ワイヤレスイヤホン":
+            kind = "ワイヤレスイヤホン"
+        result = f"{prefix} {kind}"
+        bluetooth = re.search(bluetooth_pattern, value, re.IGNORECASE)
+        if bluetooth:
+            result += f" Bluetooth {bluetooth.group(1)}"
+        return result
+
+    # ブランドや型番が明確でない商品は、商品種別と高確度の仕様だけに絞る。
+    category = re.search(earphone_type, parsed, re.IGNORECASE)
+    if category:
+        kind = re.sub(r'\s+', "", category.group(1))
+        if kind == "完全ワイヤレスイヤホン":
+            kind = "ワイヤレスイヤホン"
+
+        prefix = parsed[: category.start()].strip(" ・/|｜-【】[]()（）")
+        if any(
+            token in prefix.lower()
+            for token in ["off", "クーポン", "楽天", "ポイント", "ランキング", "実質"]
+        ):
+            prefix = ""
+
+        result = f"{prefix} {kind}".strip()
+        bluetooth = re.search(bluetooth_pattern, value, re.IGNORECASE)
+        if bluetooth:
+            result += f" Bluetooth {bluetooth.group(1)}"
+
+        if not prefix:
+            if re.search(r'\bANC\b', value, re.IGNORECASE):
+                result += " ANC"
+            elif "液晶" in value:
+                result += " 液晶画面付き"
+            elif "インナーイヤー" in value:
+                result += " インナーイヤー"
+            elif "耳掛け" in value:
+                result += " 耳掛け"
+
+        return shorten(" ".join(result.split()), 64)
+
+    return shorten(original, 60)
+
+
 def parse_cards(text, label):
     parsed = []
 
@@ -116,17 +216,18 @@ def choose_distinct(source, used_names):
 
 
 def build_quick_card(item, label, reason):
+    visible_name = display_name(item["name"])
     image_html = ""
     if item["image"]:
         image_html = (
             f'<img src="{item["image"]}" '
-            f'alt="{escape_text(shorten(item["name"], 80))}" loading="lazy">'
+            f'alt="{escape_text(visible_name)}" loading="lazy">'
         )
 
     return f'''<article class="quick-card">
     <div class="quick-label">{escape_text(label)}</div>
     <div class="quick-image">{image_html}</div>
-    <h3 title="{escape_text(item["name"])}">{escape_text(shorten(item["name"], 62))}</h3>
+    <h3 title="{escape_text(item["name"])}">{escape_text(visible_name)}</h3>
     <div class="quick-stats">
         <span class="data-chip">★ {item["rating"]:.2f}</span>
         <span class="data-chip">{item["reviews"]:,}件</span>
@@ -136,6 +237,39 @@ def build_quick_card(item, label, reason):
     <a class="quick-button" href="{item["link"]}" target="_blank"
        rel="nofollow sponsored noopener">楽天市場で価格・詳細を見る</a>
 </article>'''
+
+
+def apply_display_names(text, label):
+    """ランキングカードの見出しだけを短縮し、元の商品名はtitle属性に保持する。"""
+    changed = 0
+
+    def replace_card(match):
+        nonlocal changed
+        body = match.group("body")
+        heading = re.search(r'<h2>(.*?)</h2>', body, re.DOTALL)
+        if not heading:
+            raise RuntimeError(f"商品名見出しが見つかりません: {label}")
+
+        raw_name = text_value(heading.group(1))
+        visible_name = display_name(raw_name)
+        replacement = (
+            f'<h2 title="{escape_text(raw_name)}">'
+            f'{escape_text(visible_name)}</h2>'
+        )
+        body = re.sub(
+            r'<h2>.*?</h2>',
+            replacement,
+            body,
+            count=1,
+            flags=re.DOTALL,
+        )
+        changed += 1
+        return '<article class="card">' + body + '</article>'
+
+    updated = CARD_PATTERN.sub(replace_card, text)
+    if changed != 10:
+        raise RuntimeError(f"表示名を変更した商品カードが10件ではありません: {label} 件数={changed}")
+    return updated
 
 
 # 毎日の生成後に、4ランキングへ共通デザインとCTA文言を適用する。
@@ -309,6 +443,8 @@ top_text = replace_single(
     "bottom ranking explanation",
 )
 
+# 総合ランキングの長い楽天掲載名を、表示上だけ読みやすくする。
+top_text = apply_display_names(top_text, "総合ランキング")
 
 # ランキング本体やアフィリエイト導線を壊していないか最終確認する。
 if top_text.count('class="card"') != 10:
@@ -325,4 +461,11 @@ if top_text.count("hb.afl.rakuten.co.jp") < 10:
     raise RuntimeError("楽天アフィリエイトURLの確認に失敗しました。")
 
 top_path.write_text(top_text, encoding="utf-8")
-print("Purchase-first ranking page V3 optimization: OK")
+
+# 価格帯・レビュー件数順ページも、同じ表示名ルールを適用する。
+for path in RANKING_PATHS[1:]:
+    text = path.read_text(encoding="utf-8")
+    text = apply_display_names(text, str(path))
+    path.write_text(text, encoding="utf-8")
+
+print("Purchase-first ranking page + clean product names optimization: OK")
