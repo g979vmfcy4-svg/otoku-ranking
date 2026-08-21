@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google-site-verification" content="xebuT18VaLulU2FGAl1MrnJnOgS4b1ZjrZcFaV45KyQ">
+<meta name="description" content="イヤホンのレビュー平均とレビュー件数の違い、ベイズ補正の役割、購入前に確認したいポイントを分かりやすく解説します。">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://otoku-ranking.pages.dev/earphones/review-guide/">
+<title>イヤホンレビューの星と件数の読み方｜ランキング活用ガイド</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#222;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}header{background:#fff;padding:28px 16px;border-bottom:1px solid #ddd}header div,main,footer,.ranking-nav{max-width:760px;margin:auto}h1{margin:0 0 10px;font-size:28px}header p{margin:0;color:#666;line-height:1.7}.ranking-nav{padding:14px 12px 0;display:flex;gap:8px;flex-wrap:wrap}.ranking-nav a{background:#fff;color:#333;text-decoration:none;border:1px solid #ddd;border-radius:8px;padding:8px 11px;font-size:13px;font-weight:bold}main{padding:18px 12px 32px}section{background:#fff;padding:20px;margin-bottom:14px;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}h2{margin:0 0 12px;font-size:20px}h3{margin:18px 0 8px;font-size:16px}p,li,dd,dt{line-height:1.8;font-size:14px}ul,ol{padding-left:22px}.note{border-left:4px solid #444;padding-left:12px;color:#555}.link{font-weight:bold}table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}th,td{padding:10px;border:1px solid #ddd;text-align:left}th{background:#f7f8fa}footer{padding:18px 14px 40px;color:#666;font-size:12px;line-height:1.7}@media(max-width:520px){h1{font-size:24px}section{padding:16px}table{font-size:12px}}
+</style>
+<link rel="stylesheet" href="/assets/seo-expansion.css">
+<link rel="stylesheet" href="/assets/trust-content.css">
+<script type="application/ld+json" data-seo="breadcrumb">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "トップ",
+      "item": "https://otoku-ranking.pages.dev/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "イヤホンランキング",
+      "item": "https://otoku-ranking.pages.dev/earphones/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "レビューの読み方",
+      "item": "https://otoku-ranking.pages.dev/earphones/review-guide/"
+    }
+  ]
+}
+</script>
+<!-- search-meta:start -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#bf0000">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="イヤホンランキング">
+<meta property="og:title" content="イヤホンレビューの星と件数の読み方｜ランキング活用ガイド">
+<meta property="og:description" content="イヤホンのレビュー平均とレビュー件数の違い、ベイズ補正の役割、購入前に確認したいポイントを分かりやすく解説します。">
+<meta property="og:url" content="https://otoku-ranking.pages.dev/earphones/review-guide/">
+<meta property="og:image" content="https://otoku-ranking.pages.dev/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="楽天市場イヤホン高評価ランキング">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://otoku-ranking.pages.dev/og-image.png">
+<!-- search-meta:end -->
+<link rel="stylesheet" href="/assets/design-polish.css">
+<link rel="stylesheet" href="/assets/conversion-polish.css">
+</head>
+<body>
+<a class="skip-link" href="#main-content">本文へ移動</a>
+<header><div><h1>イヤホンレビューの星と件数の読み方</h1><p>レビュー平均だけで決めず、件数・価格・低評価の内容も組み合わせて候補を絞るためのガイドです。</p></div></header>
+<nav class="ranking-nav ranking-nav-polished" aria-label="イヤホンランキング">
+    <a class="nav-primary" href="/earphones/">一覧</a>
+    <a class="nav-primary" href="/">総合</a>
+    <details class="nav-group">
+        <summary>価格</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/under-5000/">5,000円以下</a>
+            <a href="/earphones/under-10000/">5,001〜10,000円</a>
+        </div>
+    </details>
+    <details class="nav-group">
+        <summary>種類</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/wireless/">ワイヤレス</a>
+            <a href="/earphones/wired/">有線</a>
+            <a href="/earphones/earcuff/">イヤーカフ</a>
+        </div>
+    </details>
+    <a class="nav-primary" href="/earphones/most-reviewed/">レビュー</a>
+    <details class="nav-group nav-group-secondary">
+        <summary>基準・運営</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/review-guide/">レビューの読み方</a>
+            <a href="/earphones/methodology/">ランキング基準</a>
+            <a href="/about/">このサイトについて</a>
+            <a href="/contact/">お問い合わせ</a>
+            <a href="/privacy/">プライバシー</a>
+        </div>
+    </details>
+</nav>
+<main id="main-content">
+<nav class="breadcrumbs" aria-label="パンくず"><a href="/">トップ</a><span>›</span><a href="/earphones/">イヤホンランキング</a><span>›</span><span aria-current="page">レビューの読み方</span></nav>
+<section>
+<h2>星の数だけでは判断しにくい理由</h2>
+<p>レビュー平均は商品の評価を短時間で確認できる便利な数字ですが、件数が少ないほど、数件の高評価・低評価で平均が大きく動きます。平均点とレビュー件数を一緒に見ることで、評価の高さと安定性を分けて考えられます。</p>
+<table><thead><tr><th>例</th><th>レビュー平均</th><th>レビュー件数</th><th>読み取り方</th></tr></thead><tbody><tr><td>A</td><td>★4.80</td><td>15件</td><td>高評価だが、今後平均が動く可能性が比較的大きい</td></tr><tr><td>B</td><td>★4.60</td><td>3,000件</td><td>Aより平均は低いが、多数の評価が蓄積している</td></tr></tbody></table>
+<p class="note">どちらが必ず優れているという意味ではありません。平均点の高さを優先するか、評価の蓄積を優先するかで選択が変わります。</p>
+</section>
+<section>
+<h2>当サイトがベイズ補正を使う理由</h2>
+<p>当サイトでは、レビュー件数が少ない商品の平均点を候補全体の平均へ少し近づける「ベイズ補正」を使用しています。レビューが十分に多い商品は実際の平均点に近く、少ない商品ほど候補全体の平均の影響を受けます。</p>
+<p>ただし、ベイズ補正は音質や耐久性を測定するものではありません。レビュー数字の見かけ上の不安定さを抑え、同じ候補群を比べやすくする処理です。</p>
+<p><a class="link" href="/earphones/methodology/">実際の式と候補抽出条件を見る →</a></p>
+</section>
+<section>
+<h2>購入前に確認したい4つの手順</h2>
+<ol><li><strong>目的を決める：</strong>総合、価格、種類、レビュー件数のどの軸を優先するか決めます。</li><li><strong>順位差を過大評価しない：</strong>星の差が小さい商品は、価格やレビュー件数も一緒に比較します。</li><li><strong>低評価レビューも確認する：</strong>接続、装着感、初期不良など、自分が避けたい問題が繰り返し書かれていないか確認します。</li><li><strong>楽天市場で最終確認する：</strong>対応機器、付属品、保証、送料、クーポン、在庫は購入時点の商品ページで確認します。</li></ol>
+</section>
+<section>
+<h2>このデータで分かること・分からないこと</h2>
+<div class="guide-columns"><div><h3>分かること</h3><ul><li>取得時点の価格</li><li>レビュー平均と件数</li><li>同じ候補群内での相対的な順位</li><li>価格帯・種類別の比較</li></ul></div><div><h3>分からないこと</h3><ul><li>実際の音質や装着感</li><li>長期間使用した耐久性</li><li>レビュー内容が自分にも当てはまるか</li><li>商品名に書かれた機能の実性能</li></ul></div></div>
+<p class="note">当サイトは候補を絞るためのデータ比較サイトです。最終的な購入判断を代行するものではありません。</p>
+</section>
+<section class="static-actions"><h2>ランキングから候補を探す</h2><p><a class="primary-link" href="/">総合ランキングを見る →</a> <a class="secondary-link" href="/earphones/">目的別ランキングを選ぶ →</a></p></section>
+</main>
+<footer>
+    <p>当サイトは楽天アフィリエイトを利用しています。価格・在庫・レビュー件数などは取得時点の情報です。</p>
+    <nav class="footer-links" aria-label="サイト情報">
+        <a href="/about/">運営方針</a>
+        <a href="/earphones/methodology/">ランキング基準</a>
+        <a href="/earphones/review-guide/">レビューの読み方</a>
+        <a href="/contact/">お問い合わせ</a>
+        <a href="/privacy/">プライバシーポリシー</a>
+        <a href="https://developers.rakuten.com/" target="_blank" rel="noopener">Supported by Rakuten Developers</a>
+    </nav>
+</footer>
+<script defer src="/assets/analytics.js"></script>
+</body>
+</html>

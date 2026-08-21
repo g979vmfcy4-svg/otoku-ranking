@@ -13,7 +13,10 @@ PAGES = [
     Path("public/earphones/earcuff/index.html"),
     Path("public/earphones/most-reviewed/index.html"),
     Path("public/earphones/methodology/index.html"),
+    Path("public/earphones/review-guide/index.html"),
     Path("public/about/index.html"),
+    Path("public/contact/index.html"),
+    Path("public/privacy/index.html"),
 ]
 
 RANKING_MODES = {
@@ -72,8 +75,11 @@ NAV_HTML = '''<nav class="ranking-nav ranking-nav-polished" aria-label="イヤ�
     <details class="nav-group nav-group-secondary">
         <summary>基準・運営</summary>
         <div class="nav-group-menu">
+            <a href="/earphones/review-guide/">レビューの読み方</a>
             <a href="/earphones/methodology/">ランキング基準</a>
             <a href="/about/">このサイトについて</a>
+            <a href="/contact/">お問い合わせ</a>
+            <a href="/privacy/">プライバシー</a>
         </div>
     </details>
 </nav>'''
@@ -126,7 +132,12 @@ def polish_hero(text):
 
 
 def quick_label(match):
-    original = visible_text(match.group(1))
+    content = match.group(1)
+    small = re.search(r'<small>(.*?)</small>', content, re.DOTALL)
+    original = visible_text(small.group(1) if small else content)
+    for prefix in ("評価の安定性で選ぶ", "価格を抑えて選ぶ", "購入実績で選ぶ"):
+        while original.startswith(prefix):
+            original = original[len(prefix):].strip()
     if "総合" in original:
         intent = "評価の安定性で選ぶ"
     elif "5,000円以下" in original:
@@ -206,8 +217,8 @@ def add_metric_bars(text, path, mode):
     expected = 30
     if mode == "review_count":
         text, removed = REVIEW_DUPLICATE_RE.subn("", text)
-        if removed != 10:
-            raise RuntimeError(f"レビュー件数順の重複指標が10件ではありません: {path} removed={removed}")
+        if removed not in (0, 10):
+            raise RuntimeError(f"レビュー件数順の重複指標数が不正です: {path} removed={removed}")
         expected = 20
 
     count = 0

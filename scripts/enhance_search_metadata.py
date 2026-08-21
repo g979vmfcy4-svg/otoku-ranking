@@ -1,5 +1,6 @@
 from pathlib import Path
 import html
+import json
 import re
 
 
@@ -13,8 +14,21 @@ PAGES = [
     Path("public/earphones/earcuff/index.html"),
     Path("public/earphones/most-reviewed/index.html"),
     Path("public/earphones/methodology/index.html"),
+    Path("public/earphones/review-guide/index.html"),
     Path("public/about/index.html"),
+    Path("public/contact/index.html"),
+    Path("public/privacy/index.html"),
 ]
+
+RANKING_PAGES = {
+    Path("public/index.html"),
+    Path("public/earphones/under-5000/index.html"),
+    Path("public/earphones/under-10000/index.html"),
+    Path("public/earphones/wireless/index.html"),
+    Path("public/earphones/wired/index.html"),
+    Path("public/earphones/earcuff/index.html"),
+    Path("public/earphones/most-reviewed/index.html"),
+}
 
 DESIGN_STYLESHEET = '<link rel="stylesheet" href="/assets/design-polish.css">'
 META_BLOCK_RE = re.compile(
@@ -37,6 +51,11 @@ SKIP_LINK_RE = re.compile(
     r'\s*<a class="skip-link" href="#main-content">.*?</a>\s*',
     re.DOTALL,
 )
+ITEMLIST_RE = re.compile(
+    r'\s*<script type="application/ld\+json" data-seo="itemlist">.*?</script>\s*',
+    re.DOTALL,
+)
+OG_IMAGE_URL = "https://otoku-ranking.pages.dev/og-image.png"
 
 
 def extract(pattern, text, label):
@@ -59,7 +78,12 @@ def build_meta_block(title, description, canonical, has_rakuten_images):
 <meta property="og:title" content="{html.escape(title, quote=True)}">
 <meta property="og:description" content="{html.escape(description, quote=True)}">
 <meta property="og:url" content="{html.escape(canonical, quote=True)}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{OG_IMAGE_URL}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="楽天市場イヤホン高評価ランキング">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{OG_IMAGE_URL}">
 {preconnect}<!-- search-meta:end -->'''
 
 
@@ -156,6 +180,50 @@ def add_design_accessibility(text, path):
     return text
 
 
+def visible_text(fragment):
+    fragment = re.sub(r"<[^>]+>", "", fragment)
+    return " ".join(html.unescape(fragment).split())
+
+
+def add_itemlist_structured_data(text, path):
+    text = ITEMLIST_RE.sub("\n", text)
+    cards = re.findall(
+        r'<article class="card">(.*?)</article>',
+        text,
+        flags=re.DOTALL,
+    )
+    if len(cards) != 10:
+        raise RuntimeError(f"ItemList対象の商品カードが10件ではありません: {path}")
+
+    items = []
+    for card in cards:
+        rank = re.search(r'<div class="rank">(\d+)</div>', card)
+        heading = re.search(r'<h2(?:\s+[^>]*)?>(.*?)</h2>', card, re.DOTALL)
+        if not rank or not heading:
+            raise RuntimeError(f"ItemList用の商品名・順位を取得できません: {path}")
+        items.append(
+            {
+                "@type": "ListItem",
+                "position": int(rank.group(1)),
+                "name": visible_text(heading.group(1)),
+            }
+        )
+
+    data = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "itemListOrder": "https://schema.org/ItemListOrderAscending",
+        "numberOfItems": len(items),
+        "itemListElement": items,
+    }
+    block = (
+        '<script type="application/ld+json" data-seo="itemlist">\n'
+        + json.dumps(data, ensure_ascii=False, indent=2)
+        + "\n</script>"
+    )
+    return text.replace("</head>", block + "\n</head>", 1)
+
+
 for path in PAGES:
     if not path.exists():
         raise RuntimeError(f"検索メタデータ対象ページがありません: {path}")
@@ -188,11 +256,15 @@ for path in PAGES:
     text = enable_large_image_preview(text, path)
     text = optimize_images(text)
     text = add_design_accessibility(text, path)
+    if path in RANKING_PAGES:
+        text = add_itemlist_structured_data(text, path)
 
     if text.count('rel="icon" href="/favicon.svg"') != 1:
         raise RuntimeError(f"favicon設定が不正です: {path}")
     if text.count('property="og:title"') != 1:
         raise RuntimeError(f"OGタイトル設定が不正です: {path}")
+    if text.count('property="og:image"') != 1:
+        raise RuntimeError(f"OG画像設定が不正です: {path}")
     if text.count("max-image-preview:large") != 1:
         raise RuntimeError(f"画像プレビュー設定が不正です: {path}")
     if text.count(DESIGN_STYLESHEET) != 1:
@@ -201,6 +273,8 @@ for path in PAGES:
         raise RuntimeError(f"スキップリンク設定が不正です: {path}")
     if text.count('id="main-content"') != 1:
         raise RuntimeError(f"本文アンカー設定が不正です: {path}")
+    if path in RANKING_PAGES and text.count('data-seo="itemlist"') != 1:
+        raise RuntimeError(f"ItemList設定が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
 
