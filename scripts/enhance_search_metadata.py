@@ -1,0 +1,148 @@
+from pathlib import Path
+import html
+import re
+
+
+PAGES = [
+    Path("public/index.html"),
+    Path("public/earphones/index.html"),
+    Path("public/earphones/under-5000/index.html"),
+    Path("public/earphones/under-10000/index.html"),
+    Path("public/earphones/wireless/index.html"),
+    Path("public/earphones/wired/index.html"),
+    Path("public/earphones/earcuff/index.html"),
+    Path("public/earphones/most-reviewed/index.html"),
+    Path("public/earphones/methodology/index.html"),
+    Path("public/about/index.html"),
+]
+
+META_BLOCK_RE = re.compile(
+    r'<!-- search-meta:start -->.*?<!-- search-meta:end -->',
+    re.DOTALL,
+)
+LD_JSON_RE = re.compile(
+    r'<script type="application/ld\+json">.*?</script>',
+    re.DOTALL,
+)
+RAKUTEN_IMAGE_RE = re.compile(
+    r'<img\b[^>]*src="https://thumbnail\.image\.rakuten\.co\.jp[^>]*>',
+    re.IGNORECASE,
+)
+
+
+def extract(pattern, text, label):
+    match = re.search(pattern, text, re.DOTALL)
+    if not match:
+        raise RuntimeError(f"{label} を取得できません")
+    return html.unescape(match.group(1)).strip()
+
+
+def build_meta_block(title, description, canonical, has_rakuten_images):
+    preconnect = ""
+    if has_rakuten_images:
+        preconnect = '<link rel="preconnect" href="https://thumbnail.image.rakuten.co.jp" crossorigin>\n'
+
+    return f'''<!-- search-meta:start -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#bf0000">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="イヤホンランキング">
+<meta property="og:title" content="{html.escape(title, quote=True)}">
+<meta property="og:description" content="{html.escape(description, quote=True)}">
+<meta property="og:url" content="{html.escape(canonical, quote=True)}">
+<meta name="twitter:card" content="summary">
+{preconnect}<!-- search-meta:end -->'''
+
+
+def enrich_website_structured_data(text):
+    replacement = '''<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "イヤホンランキング",
+  "alternateName": "otoku-ranking.pages.dev",
+  "url": "https://otoku-ranking.pages.dev/"
+}
+</script>'''
+
+    replaced = False
+
+    def repl(match):
+        nonlocal replaced
+        block = match.group(0)
+        if '"@type": "WebSite"' in block:
+            replaced = True
+            return replacement
+        return block
+
+    text = LD_JSON_RE.sub(repl, text)
+    if not replaced:
+        text = text.replace("</head>", replacement + "\n</head>", 1)
+    return text
+
+
+def add_dimensions(tag):
+    if ' width="' not in tag:
+        tag = tag[:-1] + ' width="128"' + tag[-1]
+    if ' height="' not in tag:
+        tag = tag[:-1] + ' height="128"' + tag[-1]
+    return tag
+
+
+def optimize_images(text):
+    text = RAKUTEN_IMAGE_RE.sub(lambda m: add_dimensions(m.group(0)), text)
+    match = RAKUTEN_IMAGE_RE.search(text)
+    if not match:
+        return text
+
+    first = match.group(0)
+    optimized = first
+    if 'loading="lazy"' in optimized:
+        optimized = optimized.replace('loading="lazy"', 'loading="eager" fetchpriority="high"', 1)
+    elif 'loading="eager"' not in optimized:
+        optimized = optimized[:-1] + ' loading="eager" fetchpriority="high">'
+    elif 'fetchpriority=' not in optimized:
+        optimized = optimized[:-1] + ' fetchpriority="high">'
+
+    return text[:match.start()] + optimized + text[match.end():]
+
+
+for path in PAGES:
+    if not path.exists():
+        raise RuntimeError(f"検索メタデータ対象ページがありません: {path}")
+
+    text = path.read_text(encoding="utf-8")
+    title = extract(r'<title>(.*?)</title>', text, f"title: {path}")
+    description = extract(
+        r'<meta name="description" content="([^"]*)">',
+        text,
+        f"description: {path}",
+    )
+    canonical = extract(
+        r'<link rel="canonical" href="([^"]+)">',
+        text,
+        f"canonical: {path}",
+    )
+
+    text = META_BLOCK_RE.sub("", text)
+    block = build_meta_block(
+        title,
+        description,
+        canonical,
+        "thumbnail.image.rakuten.co.jp" in text,
+    )
+    text = text.replace("</head>", block + "\n</head>", 1)
+
+    if path == Path("public/index.html"):
+        text = enrich_website_structured_data(text)
+
+    text = optimize_images(text)
+
+    if text.count('rel="icon" href="/favicon.svg"') != 1:
+        raise RuntimeError(f"favicon設定が不正です: {path}")
+    if text.count('property="og:title"') != 1:
+        raise RuntimeError(f"OGタイトル設定が不正です: {path}")
+
+    path.write_text(text, encoding="utf-8")
+
+print("Search metadata / favicon / image performance: OK")

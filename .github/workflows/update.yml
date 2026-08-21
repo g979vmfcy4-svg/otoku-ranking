@@ -19,11 +19,17 @@ on:
       - "scripts/update_price_band_copy.py"
       - "scripts/enhance_seo_structure.py"
       - "scripts/finalize_category_names.py"
+      - "scripts/add_ranking_statistics.py"
+      - "scripts/enhance_search_metadata.py"
       - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
       - "public/assets/seo-expansion.css"
+      - "public/assets/seo-hardening.css"
       - "public/assets/analytics.js"
       - "public/earphones/index.html"
+      - "public/404.html"
+      - "public/_headers"
+      - "public/favicon.svg"
 
 permissions:
   contents: write
@@ -48,7 +54,7 @@ jobs:
 
       - name: Check Python syntax
         id: syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/enhance_search_metadata.py scripts/inject_analytics.py
 
       - name: Install Playwright
         id: playwright
@@ -102,6 +108,14 @@ jobs:
         id: final_names
         run: python scripts/finalize_category_names.py
 
+      - name: Add ranking statistics
+        id: ranking_stats
+        run: python scripts/add_ranking_statistics.py
+
+      - name: Improve search metadata and image loading
+        id: search_metadata
+        run: python scripts/enhance_search_metadata.py
+
       - name: Add analytics tracking
         id: analytics
         run: python scripts/inject_analytics.py
@@ -133,6 +147,8 @@ jobs:
             echo "price_copy=${{ steps.price_copy.outcome }}"
             echo "seo_structure=${{ steps.seo_structure.outcome }}"
             echo "final_names=${{ steps.final_names.outcome }}"
+            echo "ranking_stats=${{ steps.ranking_stats.outcome }}"
+            echo "search_metadata=${{ steps.search_metadata.outcome }}"
             echo "analytics=${{ steps.analytics.outcome }}"
             echo "commit_pages=${{ steps.commit_pages.outcome }}"
             if [ -f /tmp/category-generation.log ]; then
