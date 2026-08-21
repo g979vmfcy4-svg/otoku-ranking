@@ -24,6 +24,10 @@ LD_JSON_RE = re.compile(
     r'<script type="application/ld\+json">.*?</script>',
     re.DOTALL,
 )
+ROBOTS_META_RE = re.compile(
+    r'<meta name="robots" content="([^"]*)">',
+    re.IGNORECASE,
+)
 RAKUTEN_IMAGE_RE = re.compile(
     r'<img\b[^>]*src="https://thumbnail\.image\.rakuten\.co\.jp[^>]*>',
     re.IGNORECASE,
@@ -81,6 +85,22 @@ def enrich_website_structured_data(text):
     return text
 
 
+def enable_large_image_preview(text, path):
+    match = ROBOTS_META_RE.search(text)
+    if not match:
+        raise RuntimeError(f"robots meta がありません: {path}")
+
+    directives = [part.strip() for part in match.group(1).split(",") if part.strip()]
+    directives = [
+        directive
+        for directive in directives
+        if not directive.lower().startswith("max-image-preview:")
+    ]
+    directives.append("max-image-preview:large")
+    replacement = f'<meta name="robots" content="{",".join(directives)}">'
+    return text[:match.start()] + replacement + text[match.end():]
+
+
 def add_dimensions(tag):
     if ' width="' not in tag:
         tag = tag[:-1] + ' width="128"' + tag[-1]
@@ -136,12 +156,15 @@ for path in PAGES:
     if path == Path("public/index.html"):
         text = enrich_website_structured_data(text)
 
+    text = enable_large_image_preview(text, path)
     text = optimize_images(text)
 
     if text.count('rel="icon" href="/favicon.svg"') != 1:
         raise RuntimeError(f"favicon設定が不正です: {path}")
     if text.count('property="og:title"') != 1:
         raise RuntimeError(f"OGタイトル設定が不正です: {path}")
+    if text.count("max-image-preview:large") != 1:
+        raise RuntimeError(f"画像プレビュー設定が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
 

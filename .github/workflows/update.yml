@@ -21,6 +21,7 @@ on:
       - "scripts/finalize_category_names.py"
       - "scripts/add_ranking_statistics.py"
       - "scripts/enhance_search_metadata.py"
+      - "scripts/submit_indexnow.py"
       - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
       - "public/assets/seo-expansion.css"
@@ -30,6 +31,7 @@ on:
       - "public/404.html"
       - "public/_headers"
       - "public/favicon.svg"
+      - "public/fb6c0bc82a2306cdb2d15bc398deffe4.txt"
 
 permissions:
   contents: write
@@ -54,7 +56,7 @@ jobs:
 
       - name: Check Python syntax
         id: syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/enhance_search_metadata.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/enhance_search_metadata.py scripts/submit_indexnow.py scripts/inject_analytics.py
 
       - name: Install Playwright
         id: playwright
@@ -134,6 +136,30 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
           git push
+
+      - name: Wait briefly for Pages deployment
+        id: pages_ready
+        continue-on-error: true
+        shell: bash
+        run: |
+          KEY_URL="https://otoku-ranking.pages.dev/fb6c0bc82a2306cdb2d15bc398deffe4.txt"
+          EXPECTED="fb6c0bc82a2306cdb2d15bc398deffe4"
+          for attempt in 1 2 3 4 5 6; do
+            value="$(curl -fsS "$KEY_URL" || true)"
+            if [ "$value" = "$EXPECTED" ]; then
+              sleep 20
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "IndexNow verification key is not public yet"
+          exit 1
+
+      - name: Notify IndexNow search engines
+        id: indexnow
+        if: steps.pages_ready.outcome == 'success'
+        continue-on-error: true
+        run: python scripts/submit_indexnow.py
 
       - name: Record failed stage privately
         if: failure()
