@@ -63,22 +63,28 @@ def competition_rank(value, values):
     return 1 + sum(other > value for other in values)
 
 
-def rating_context(rating, average):
-    diff = rating - average
-    if abs(diff) < 0.005:
-        return f"表示評価★{rating:.2f}はTOP10平均と同水準"
-    direction = "高い" if diff > 0 else "低い"
-    return f"表示評価★{rating:.2f}はTOP10平均より{abs(diff):.2f}{direction}"
+def signed_decimal(value):
+    if abs(value) < 0.005:
+        return "±0.00"
+    sign = "+" if value > 0 else "−"
+    return f"{sign}{abs(value):.2f}"
 
 
-def price_context(price, median):
-    if median <= 0:
-        return "価格中央値との比較対象外"
-    pct = (price - median) / median * 100
-    if abs(pct) < 3:
-        return f"価格{price:,}円はTOP10中央値とほぼ同水準"
-    direction = "安い" if pct < 0 else "高い"
-    return f"価格{price:,}円はTOP10中央値より{abs(pct):.0f}%{direction}"
+def signed_yen(value):
+    rounded = round(value)
+    if abs(rounded) < 100:
+        return "ほぼ同水準"
+    sign = "+" if rounded > 0 else "−"
+    return f"{sign}{abs(rounded):,}円"
+
+
+def metric(label, value):
+    return (
+        '<div class="insight-metric">'
+        f'<span>{html.escape(label)}</span>'
+        f'<strong>{html.escape(value)}</strong>'
+        '</div>'
+    )
 
 
 def build_insight(card, cards, mode):
@@ -90,28 +96,33 @@ def build_insight(card, cards, mode):
 
     rating_rank = competition_rank(card["rating"], ratings)
     review_rank = competition_rank(card["reviews"], reviews)
-    rating_text = rating_context(card["rating"], average_rating)
-    price_text = price_context(card["price"], median_price)
+    rating_delta = card["rating"] - average_rating
+    price_delta = card["price"] - median_price
 
     if mode == "review_count":
-        sentence = (
-            f"レビュー{card['reviews']:,}件でTOP10内{review_rank}位。"
-            f"このページはレビュー件数順のため、この件数が順位の基準です。"
-            f"{rating_text}（評価順位はTOP10内{rating_rank}位）。{price_text}。"
-        )
+        primary_label = "レビュー件数"
+        primary_value = f"{card['rank']}位"
     else:
-        sentence = (
-            f"レビュー件数を考慮した補正後評価で{card['rank']}位。"
-            f"{rating_text}（評価順位はTOP10内{rating_rank}位）、"
-            f"レビュー件数は{card['reviews']:,}件でTOP10内{review_rank}位。"
-            f"{price_text}。"
-        )
+        primary_label = "補正評価"
+        primary_value = f"{card['rank']}位"
+
+    metrics = "".join([
+        metric(primary_label, primary_value),
+        metric("評価順位", f"{rating_rank}位"),
+        metric("レビュー数", f"{review_rank}位"),
+    ])
+    detail = (
+        f"★{card['rating']:.2f}（TOP10平均{signed_decimal(rating_delta)}）"
+        f"・{card['reviews']:,}件"
+        f"・{card['price']:,}円（価格中央値{signed_yen(price_delta)}）"
+    )
 
     return (
         '<!-- rank-insight:start -->\n'
         '<div class="card-insight" aria-label="この商品の順位データ">\n'
-        '  <div class="card-insight-label">データで見る</div>\n'
-        f'  <p>{html.escape(sentence)}</p>\n'
+        '  <div class="card-insight-label">順位の根拠</div>\n'
+        f'  <div class="insight-metrics">{metrics}</div>\n'
+        f'  <p class="insight-detail">{html.escape(detail)}</p>\n'
         '</div>\n'
         '<!-- rank-insight:end -->'
     )
@@ -158,12 +169,14 @@ def process(path, mode):
 
     if text.count('<!-- rank-insight:start -->') != 10:
         raise RuntimeError(f"順位説明が10件ではありません: {path}")
+    if text.count('class="insight-metrics"') != 10:
+        raise RuntimeError(f"順位指標の表示件数が不正です: {path}")
     if text.count(STYLESHEET) != 1:
         raise RuntimeError(f"順位説明CSSの読み込み件数が不正です: {path}")
-    if mode == "bayesian" and text.count("補正後評価で") != 10:
-        raise RuntimeError(f"補正後評価の説明件数が不正です: {path}")
-    if mode == "review_count" and text.count("このページはレビュー件数順") != 10:
-        raise RuntimeError(f"レビュー件数順の説明件数が不正です: {path}")
+    if mode == "bayesian" and text.count("補正評価") < 10:
+        raise RuntimeError(f"補正評価の表示件数が不正です: {path}")
+    if mode == "review_count" and text.count("レビュー件数") < 10:
+        raise RuntimeError(f"レビュー件数の表示件数が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
     print(f"Ranking reasons: OK {path}")

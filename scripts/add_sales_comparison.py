@@ -19,11 +19,15 @@ SECTION_RE = re.compile(
     r'\s*<!-- sales-compare:start -->.*?<!-- sales-compare:end -->\s*',
     re.DOTALL,
 )
-METHODOLOGY_RE = re.compile(
+METHOD_RE = re.compile(
     r'\s*<!-- sales-method:start -->.*?<!-- sales-method:end -->\s*',
     re.DOTALL,
 )
 CARD_RE = re.compile(r'<article class="card">(?P<body>.*?)</article>', re.DOTALL)
+SUMMARY_RE = re.compile(
+    r'<section class="quality-section ranking-data-summary"[^>]*>.*?</section>',
+    re.DOTALL,
+)
 
 APPLICATION_ID = os.getenv("RAKUTEN_APPLICATION_ID", "").strip()
 ACCESS_KEY = os.getenv("RAKUTEN_ACCESS_KEY", "").strip()
@@ -227,6 +231,7 @@ def build_section(data, items, own_ranks):
         )
 
     overlaps = 0
+    low_review_count = 0
     rows = []
     for item in top10:
         sales_rank = to_int(item.get("rank"))
@@ -237,6 +242,7 @@ def build_section(data, items, own_ranks):
             overlaps += 1
             own_label = f'<strong class="compare-hit">{own_rank}位</strong>'
         elif reviews < 10:
+            low_review_count += 1
             own_label = '<span class="compare-out">対象外（10件未満）</span>'
         else:
             own_label = '<span class="compare-out">TOP10圏外</span>'
@@ -267,17 +273,25 @@ def build_section(data, items, own_ranks):
     return f'''<!-- sales-compare:start -->
 <section class="sales-compare-section" aria-label="楽天売れ筋と高評価ランキングの比較">
   <div class="sales-compare-head">
-    <span class="section-kicker">売れ筋と高評価を比べる</span>
-    <h2>楽天売れ筋のイヤホン上位商品と高評価TOP10を比較</h2>
-    <p>楽天公式の「ヘッドホン・イヤホン」リアルタイムランキングから、商品名でイヤホンと確認できる商品を上位順に10件抽出しています。元の楽天ジャンル順位はそのまま表示し、当サイトの高評価TOP10と照合します。今回、両方に入った商品は<strong>{overlaps}商品</strong>です。</p>
+    <span class="section-kicker">もう1つの見方</span>
+    <h2>楽天売れ筋と高評価TOP10を比較</h2>
+    <p>「よく売れている商品」と「レビュー件数を考慮して評価が安定している商品」は同じとは限りません。今回、両方のTOP10に入った商品は<strong>{overlaps}商品</strong>でした。</p>
   </div>
-  <div class="compare-table" role="table" aria-label="楽天ジャンル順位と高評価順位の比較">
-    <div class="compare-header" role="row">
-      <div role="columnheader">楽天ジャンル順位</div><div role="columnheader">商品</div><div role="columnheader">レビュー</div><div role="columnheader">高評価順位</div>
+  <div class="sales-compare-glance" aria-label="比較結果の概要">
+    <div><span>比較した売れ筋</span><strong>10商品</strong></div>
+    <div><span>両方TOP10</span><strong>{overlaps}商品</strong></div>
+    <div><span>レビュー10件未満</span><strong>{low_review_count}商品</strong></div>
+  </div>
+  <details class="sales-compare-details">
+    <summary>売れ筋10商品の比較表を見る</summary>
+    <div class="compare-table" role="table" aria-label="楽天ジャンル順位と高評価順位の比較">
+      <div class="compare-header" role="row">
+        <div role="columnheader">楽天ジャンル順位</div><div role="columnheader">商品</div><div role="columnheader">レビュー</div><div role="columnheader">高評価順位</div>
+      </div>
+      {''.join(rows)}
     </div>
-    {''.join(rows)}
-  </div>
-  <p class="compare-note">楽天側はランキングAPIのリアルタイム順位（{updated}）。当サイト高評価はレビュー10件以上を対象にレビュー件数を考慮して補正した総合TOP10です。商品名にイヤホン・AirPods等のイヤホン表現がない明確なヘッドホン商品は比較対象から除外します。音質・装着感などの実機評価ではありません。</p>
+    <p class="compare-note">楽天側は「ヘッドホン・イヤホン」ジャンルのランキングAPIによるリアルタイム順位（{updated}）から、商品名でイヤホンと確認できる商品を抽出しています。元の楽天ジャンル順位は変更していません。当サイト高評価はレビュー10件以上を対象にレビュー件数を考慮して補正した総合TOP10です。音質・装着感などの実機評価ではありません。</p>
+  </details>
 </section>
 <!-- sales-compare:end -->'''
 
@@ -286,39 +300,48 @@ def insert_section(text, section):
     text = SECTION_RE.sub("\n", text)
     if STYLESHEET not in text:
         text = text.replace("</head>", STYLESHEET + "\n</head>", 1)
-    marker = '<div class="ranking-list-head" id="ranking">'
-    if marker not in text:
-        raise RuntimeError("総合ランキング見出しが見つかりません。")
-    text = text.replace(marker, section + "\n" + marker, 1)
+
+    summary_match = SUMMARY_RE.search(text)
+    if summary_match:
+        insert_at = summary_match.end()
+        text = text[:insert_at] + "\n" + section + text[insert_at:]
+    else:
+        marker = '<section class="quality-section about-ranking-section">'
+        if marker not in text:
+            raise RuntimeError("売れ筋比較の挿入位置が見つかりません。")
+        text = text.replace(marker, section + "\n" + marker, 1)
+
     if text.count('<!-- sales-compare:start -->') != 1:
         raise RuntimeError("売れ筋比較セクションの件数が不正です。")
+    if text.find('id="ranking"') > text.find('<!-- sales-compare:start -->'):
+        raise RuntimeError("売れ筋比較が総合ランキングより前に配置されています。")
     return text
+
+
+def methodology_block():
+    return '''<!-- sales-method:start -->
+<section><h2>楽天売れ筋との比較</h2><p>トップページでは、当サイトの高評価ランキングとは別に、楽天市場ランキングAPIのリアルタイム順位を取得して「売れ筋」と「高評価」の違いを比較します。</p><p>楽天側のgenreId 502835は「ヘッドホン・イヤホン」ジャンルのため、APIが返す元のジャンル順位は変更せず、商品名に「イヤホン」「イヤフォン」「earbud」「AirPods」「FreeBuds」などイヤホンと判断できる表現がある商品を上位順に10件抽出します。明確なヘッドホン商品は比較対象から除外します。</p><p>当サイト側の高評価TOP10とは楽天の商品コードで照合します。レビュー10件未満の商品は当サイト高評価ランキングの対象外として表示し、それ以外で一致しない商品は「TOP10圏外」と表示します。売れ筋順位そのものを当サイトの高評価順位計算には使用しません。</p></section>
+<!-- sales-method:end -->'''
 
 
 def update_methodology():
     if not METHODOLOGY_PATH.exists():
         raise RuntimeError("ランキング基準ページがありません。")
     text = METHODOLOGY_PATH.read_text(encoding="utf-8")
-    text = METHODOLOGY_RE.sub("\n", text)
-    section = '''<!-- sales-method:start -->
-<section><h2>楽天売れ筋との比較</h2><p>トップページでは、当サイトの高評価ランキングとは別に、楽天市場ランキングAPIのリアルタイム順位を取得して「売れ筋」と「高評価」の違いを比較します。</p><p>楽天側のgenreId 502835は「ヘッドホン・イヤホン」ジャンルのため、APIが返す元のジャンル順位は変更せず、商品名に「イヤホン」「イヤフォン」「earbud」「AirPods」「FreeBuds」などイヤホンと判断できる表現がある商品を上位順に10件抽出します。明確なヘッドホン商品は比較対象から除外します。</p><p>当サイト側の高評価TOP10とは楽天の商品コードで照合します。レビュー10件未満の商品は当サイト高評価ランキングの対象外として表示し、それ以外で一致しない商品は「TOP10圏外」と表示します。売れ筋順位そのものを当サイトの高評価順位計算には使用しません。</p></section>
-<!-- sales-method:end -->'''
+    text = METHOD_RE.sub("\n", text)
     marker = '<section><h2>自動更新とfail-safe</h2>'
     if marker not in text:
-        raise RuntimeError("ランキング基準ページの挿入位置が見つかりません。")
-    text = text.replace(marker, section + "\n" + marker, 1)
-    if text.count('<!-- sales-method:start -->') != 1:
-        raise RuntimeError("売れ筋比較方法の説明件数が不正です。")
+        raise RuntimeError("ランキング基準ページの挿入位置がありません。")
+    text = text.replace(marker, methodology_block() + "\n" + marker, 1)
     METHODOLOGY_PATH.write_text(text, encoding="utf-8")
 
 
 if not TOP_PATH.exists():
     raise RuntimeError("トップページがありません。")
 
-# API取得が一時的に失敗しても、比較方法の説明は毎回同じ内容へ整える。
-update_methodology()
 page_text = TOP_PATH.read_text(encoding="utf-8")
 own_ranks = current_high_rating_ranks(page_text)
+update_methodology()
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
