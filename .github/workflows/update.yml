@@ -110,7 +110,10 @@ jobs:
 
       - name: Add ranking statistics
         id: ranking_stats
-        run: python scripts/add_ranking_statistics.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/add_ranking_statistics.py 2>&1 | tee /tmp/ranking-stats.log
 
       - name: Improve search metadata and image loading
         id: search_metadata
@@ -155,6 +158,11 @@ jobs:
               echo ""
               echo "--- category generation tail ---"
               tail -n 80 /tmp/category-generation.log
+            fi
+            if [ -f /tmp/ranking-stats.log ]; then
+              echo ""
+              echo "--- ranking statistics tail ---"
+              tail -n 80 /tmp/ranking-stats.log
             fi
           } > .github/last-workflow-failure.txt
           git config user.name "github-actions[bot]"
