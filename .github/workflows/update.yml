@@ -21,6 +21,7 @@ on:
       - "scripts/finalize_category_names.py"
       - "scripts/add_ranking_statistics.py"
       - "scripts/add_card_insights.py"
+      - "scripts/add_sales_comparison.py"
       - "scripts/enhance_search_metadata.py"
       - "scripts/submit_indexnow.py"
       - "scripts/inject_analytics.py"
@@ -28,6 +29,7 @@ on:
       - "public/assets/seo-expansion.css"
       - "public/assets/seo-hardening.css"
       - "public/assets/data-insights.css"
+      - "public/assets/sales-comparison.css"
       - "public/assets/analytics.js"
       - "public/earphones/index.html"
       - "public/404.html"
@@ -58,7 +60,7 @@ jobs:
 
       - name: Check Python syntax
         id: syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/add_card_insights.py scripts/enhance_search_metadata.py scripts/submit_indexnow.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/add_card_insights.py scripts/add_sales_comparison.py scripts/enhance_search_metadata.py scripts/submit_indexnow.py scripts/inject_analytics.py
 
       - name: Install Playwright
         id: playwright
@@ -73,7 +75,20 @@ jobs:
 
       - name: Generate non-overlapping price bands
         id: price_bands
-        run: python scripts/generate_price_bands.py
+        shell: bash
+        run: |
+          set -o pipefail
+          : > /tmp/price-band-generation.log
+          for attempt in 1 2 3; do
+            echo "Price-band generation attempt ${attempt}/3" | tee -a /tmp/price-band-generation.log
+            if python scripts/generate_price_bands.py 2>&1 | tee -a /tmp/price-band-generation.log; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 15))
+            fi
+          done
+          exit 1
 
       - name: Generate category ranking pages
         id: categories
@@ -122,6 +137,11 @@ jobs:
         run: |
           set -o pipefail
           python scripts/add_ranking_statistics.py 2>&1 | tee /tmp/ranking-stats.log
+
+      - name: Compare Rakuten sales and high-rating ranks
+        id: sales_compare
+        continue-on-error: true
+        run: python scripts/add_sales_comparison.py
 
       - name: Improve search metadata and image loading
         id: search_metadata
@@ -184,9 +204,15 @@ jobs:
             echo "final_names=${{ steps.final_names.outcome }}"
             echo "rank_reasons=${{ steps.rank_reasons.outcome }}"
             echo "ranking_stats=${{ steps.ranking_stats.outcome }}"
+            echo "sales_compare=${{ steps.sales_compare.outcome }}"
             echo "search_metadata=${{ steps.search_metadata.outcome }}"
             echo "analytics=${{ steps.analytics.outcome }}"
             echo "commit_pages=${{ steps.commit_pages.outcome }}"
+            if [ -f /tmp/price-band-generation.log ]; then
+              echo ""
+              echo "--- price band generation tail ---"
+              tail -n 80 /tmp/price-band-generation.log
+            fi
             if [ -f /tmp/category-generation.log ]; then
               echo ""
               echo "--- category generation tail ---"
