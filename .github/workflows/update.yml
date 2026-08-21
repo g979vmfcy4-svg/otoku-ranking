@@ -17,6 +17,7 @@ on:
       - "scripts/generate_price_bands.py"
       - "scripts/generate_category_pages.py"
       - "scripts/update_price_band_copy.py"
+      - "scripts/build_trust_content.py"
       - "scripts/enhance_seo_structure.py"
       - "scripts/finalize_category_names.py"
       - "scripts/add_ranking_statistics.py"
@@ -33,6 +34,9 @@ on:
       - "public/assets/sales-comparison.css"
       - "public/assets/conversion-polish.css"
       - "public/assets/analytics.js"
+      - "public/assets/trust-content.css"
+      - "public/og-image.png"
+      - "public/og-image.svg"
       - "public/earphones/index.html"
       - "public/404.html"
       - "public/_headers"
@@ -50,6 +54,9 @@ jobs:
       RAKUTEN_APPLICATION_ID: ${{ secrets.RAKUTEN_APPLICATION_ID }}
       RAKUTEN_ACCESS_KEY: ${{ secrets.RAKUTEN_ACCESS_KEY }}
       RAKUTEN_AFFILIATE_ID: ${{ secrets.RAKUTEN_AFFILIATE_ID }}
+      GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+      SITE_OPERATOR_NAME: ${{ vars.SITE_OPERATOR_NAME }}
+      SITE_CONTACT_URL: ${{ vars.SITE_CONTACT_URL }}
 
     steps:
       - name: Checkout repository
@@ -62,7 +69,7 @@ jobs:
 
       - name: Check Python syntax
         id: syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/add_card_insights.py scripts/add_sales_comparison.py scripts/enhance_search_metadata.py scripts/polish_conversion_design.py scripts/submit_indexnow.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/build_trust_content.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/add_card_insights.py scripts/add_sales_comparison.py scripts/enhance_search_metadata.py scripts/polish_conversion_design.py scripts/submit_indexnow.py scripts/inject_analytics.py
 
       - name: Install Playwright
         id: playwright
@@ -121,6 +128,10 @@ jobs:
         id: price_copy
         run: python scripts/update_price_band_copy.py
 
+      - name: Add trust pages and buyer guidance
+        id: trust_content
+        run: python scripts/build_trust_content.py
+
       - name: Add SEO structure and sitemap
         id: seo_structure
         run: python scripts/enhance_seo_structure.py
@@ -163,7 +174,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f .github/last-workflow-failure.txt
-          git add public/index.html public/earphones/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/wireless/index.html public/earphones/wired/index.html public/earphones/earcuff/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html public/about/index.html public/sitemap.xml
+          git add public/index.html public/earphones/index.html public/earphones/under-5000/index.html public/earphones/under-10000/index.html public/earphones/wireless/index.html public/earphones/wired/index.html public/earphones/earcuff/index.html public/earphones/most-reviewed/index.html public/earphones/methodology/index.html public/earphones/review-guide/index.html public/about/index.html public/contact/index.html public/privacy/index.html public/assets/analytics.js public/sitemap.xml public/sitemap.txt
           git add -u .github/last-workflow-failure.txt || true
           git diff --cached --quiet && exit 0
           git commit -m "Update ranking"
@@ -206,6 +217,7 @@ jobs:
             echo "navigation=${{ steps.navigation.outcome }}"
             echo "quality=${{ steps.quality.outcome }}"
             echo "price_copy=${{ steps.price_copy.outcome }}"
+            echo "trust_content=${{ steps.trust_content.outcome }}"
             echo "seo_structure=${{ steps.seo_structure.outcome }}"
             echo "final_names=${{ steps.final_names.outcome }}"
             echo "rank_reasons=${{ steps.rank_reasons.outcome }}"

@@ -18,7 +18,10 @@ PAGE_INFO = {
     Path("public/earphones/earcuff/index.html"): ("イヤーカフ型イヤホン", "/earphones/earcuff/"),
     Path("public/earphones/most-reviewed/index.html"): ("レビュー件数順", "/earphones/most-reviewed/"),
     Path("public/earphones/methodology/index.html"): ("ランキング基準", "/earphones/methodology/"),
+    Path("public/earphones/review-guide/index.html"): ("レビューの読み方", "/earphones/review-guide/"),
     Path("public/about/index.html"): ("このサイトについて", "/about/"),
+    Path("public/contact/index.html"): ("お問い合わせ", "/contact/"),
+    Path("public/privacy/index.html"): ("プライバシーポリシー", "/privacy/"),
 }
 
 RANKING_PATHS = [
@@ -45,7 +48,10 @@ RELATED = [
     ("有線", "/earphones/wired/"),
     ("イヤーカフ", "/earphones/earcuff/"),
     ("レビュー件数順", "/earphones/most-reviewed/"),
+    ("レビューの読み方", "/earphones/review-guide/"),
 ]
+
+TOP_LEVEL_PATHS = {"/earphones/", "/about/", "/contact/", "/privacy/"}
 
 
 def text_value(fragment):
@@ -132,13 +138,21 @@ def clean_category_product_names(path):
     def repl(match):
         nonlocal changed
         body = match.group(1)
-        heading = re.search(r'<h2>(.*?)</h2>', body, re.DOTALL)
+        heading = re.search(r'<h2(?:\s+[^>]*)?>(.*?)</h2>', body, re.DOTALL)
         if not heading:
             return match.group(0)
-        raw = text_value(heading.group(1))
+        visible_heading = text_value(heading.group(1))
+        title_match = re.search(r'<h2[^>]*\stitle="([^"]*)"', body, re.DOTALL)
+        image_alt_match = re.search(r'<img\b[^>]*\salt="([^"]*)"', body, re.DOTALL)
+        raw_candidates = [
+            html_lib.unescape(title_match.group(1)).strip() if title_match else "",
+            html_lib.unescape(image_alt_match.group(1)).strip() if image_alt_match else "",
+            visible_heading,
+        ]
+        raw = max(raw_candidates, key=len)
         visible = display_name(raw)
         body = re.sub(
-            r'<h2>.*?</h2>',
+            r'<h2(?:\s+[^>]*)?>.*?</h2>',
             f'<h2 title="{escape(raw)}">{escape(visible)}</h2>',
             body,
             count=1,
@@ -163,14 +177,7 @@ def clean_category_product_names(path):
 
 
 def breadcrumb_html(label, path_value):
-    if path_value == "/earphones/":
-        return (
-            '<nav class="breadcrumbs" aria-label="パンくず">'
-            '<a href="/">トップ</a><span>›</span>'
-            f'<span aria-current="page">{escape(label)}</span></nav>'
-        )
-
-    if path_value == "/about/":
+    if path_value in TOP_LEVEL_PATHS:
         return (
             '<nav class="breadcrumbs" aria-label="パンくず">'
             '<a href="/">トップ</a><span>›</span>'
@@ -189,7 +196,7 @@ def breadcrumb_json(label, path_value):
     items = [
         {"@type": "ListItem", "position": 1, "name": "トップ", "item": SITE + "/"}
     ]
-    if path_value not in ("/earphones/", "/about/"):
+    if path_value not in TOP_LEVEL_PATHS:
         items.append(
             {
                 "@type": "ListItem",
@@ -272,9 +279,6 @@ def add_type_links_to_top():
 
 def add_related_links(path, current_url):
     text = path.read_text(encoding="utf-8")
-    if 'class="related-rankings"' in text:
-        return
-
     links = []
     for label, url in RELATED:
         if url == current_url:
@@ -287,7 +291,18 @@ def add_related_links(path, current_url):
         '<div class="related-links">' + "".join(links) + '</div>'
         '</section>'
     )
-    text = text.replace("</main>", section + "\n</main>", 1)
+    if 'class="related-rankings"' in text:
+        text, count = re.subn(
+            r'<section class="related-rankings">.*?</section>',
+            section,
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
+        if count != 1:
+            raise RuntimeError(f"関連ランキングを更新できません: {path}")
+    else:
+        text = text.replace("</main>", section + "\n</main>", 1)
     path.write_text(text, encoding="utf-8")
 
 
@@ -331,7 +346,10 @@ def write_sitemap():
     static = [
         "/earphones/",
         "/earphones/methodology/",
+        "/earphones/review-guide/",
         "/about/",
+        "/contact/",
+        "/privacy/",
     ]
 
     rows = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
@@ -350,6 +368,11 @@ def write_sitemap():
         ])
     rows.append("</urlset>")
     Path("public/sitemap.xml").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    all_urls = dynamic + static
+    Path("public/sitemap.txt").write_text(
+        "\n".join(SITE + url for url in all_urls) + "\n",
+        encoding="utf-8",
+    )
 
 
 # カテゴリページは既存の表示名処理の対象外なので、同水準まで整える。

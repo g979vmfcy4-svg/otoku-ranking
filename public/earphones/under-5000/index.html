@@ -151,6 +151,7 @@ footer {
 </script>
 <link rel="stylesheet" href="/assets/data-insights.css">
 <link rel="stylesheet" href="/assets/seo-hardening.css">
+<link rel="stylesheet" href="/assets/trust-content.css">
 <!-- search-meta:start -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#bf0000">
@@ -159,10 +160,75 @@ footer {
 <meta property="og:title" content="5,000円以下のイヤホン高評価ランキング｜楽天市場TOP10">
 <meta property="og:description" content="楽天市場の5,000円以下のイヤホンを、レビュー平均とレビュー件数の信頼度を補正して毎日比較。高評価TOP10を掲載しています。">
 <meta property="og:url" content="https://otoku-ranking.pages.dev/earphones/under-5000/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://otoku-ranking.pages.dev/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="楽天市場イヤホン高評価ランキング">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://otoku-ranking.pages.dev/og-image.png">
 <link rel="preconnect" href="https://thumbnail.image.rakuten.co.jp" crossorigin>
 <!-- search-meta:end -->
 <link rel="stylesheet" href="/assets/design-polish.css">
+<script type="application/ld+json" data-seo="itemlist">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "itemListOrder": "https://schema.org/ItemListOrderAscending",
+  "numberOfItems": 10,
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ワイヤレスイヤホン Bluetooth 6.0 液晶画面付き"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Ennice ワイヤレスイヤホン Bluetooth 5.4"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "ワイヤレスイヤホン Bluetooth 5.4"
+    },
+    {
+      "@type": "ListItem",
+      "position": 4,
+      "name": "ワイヤレスイヤホン Bluetooth 5.4 インナーイヤー"
+    },
+    {
+      "@type": "ListItem",
+      "position": 5,
+      "name": "ワイヤレスイヤホン Bluetooth 5.4 液晶画面付き"
+    },
+    {
+      "@type": "ListItem",
+      "position": 6,
+      "name": "ワイヤレスイヤホン Bluetooth 5.4"
+    },
+    {
+      "@type": "ListItem",
+      "position": 7,
+      "name": "Lazata 有線イヤホン"
+    },
+    {
+      "@type": "ListItem",
+      "position": 8,
+      "name": "パナソニック RP-HJE150 有線イヤホン"
+    },
+    {
+      "@type": "ListItem",
+      "position": 9,
+      "name": "Ennice 骨伝導イヤホン"
+    },
+    {
+      "@type": "ListItem",
+      "position": 10,
+      "name": "YOBYBO NOTE20 ワイヤレスイヤホン Bluetooth 5.1"
+    }
+  ]
+}
+</script>
 <link rel="stylesheet" href="/assets/conversion-polish.css">
 </head>
 <body>
@@ -195,8 +261,11 @@ footer {
     <details class="nav-group nav-group-secondary">
         <summary>基準・運営</summary>
         <div class="nav-group-menu">
+            <a href="/earphones/review-guide/">レビューの読み方</a>
             <a href="/earphones/methodology/">ランキング基準</a>
             <a href="/about/">このサイトについて</a>
+            <a href="/contact/">お問い合わせ</a>
+            <a href="/privacy/">プライバシー</a>
         </div>
     </details>
 </nav>
@@ -207,9 +276,18 @@ footer {
         <strong>最終更新：</strong> 2026年08月21日 19:09<br>
         5,000円以下かつレビュー10件以上の商品を対象に、候補商品の平均評価を基準にベイズ補正を行い、評価の高さとレビュー件数の信頼度を両方反映して順位を決定しています。
     </div>
-    
-            
-            <!-- ranking-trust:start -->
+<!-- decision-guide:start -->
+<section class="decision-guide" aria-labelledby="decision-guide-title">
+    <div><span class="section-kicker">順位を見る前に</span><h2 id="decision-guide-title">このランキングの使い方</h2></div>
+    <div class="decision-guide-grid">
+        <div><strong>1. 順位</strong><p>補正後の評価、またはレビュー件数の基準で候補を絞ります。</p></div>
+        <div><strong>2. 数字</strong><p>星、レビュー件数、価格とTOP10内での位置を一緒に確認します。</p></div>
+        <div><strong>3. 最終確認</strong><p>音質・装着感は未検証です。仕様や保証は楽天市場で確認します。</p></div>
+    </div>
+    <a class="decision-guide-link" href="/earphones/review-guide/">レビューの星と件数の読み方 →</a>
+</section>
+<!-- decision-guide:end -->
+<!-- ranking-trust:start -->
 <div class="ranking-trust-strip" aria-label="ランキング条件">
     <span><small>更新</small><strong>毎日</strong></span>
     <span><small>候補</small><strong>最大30商品</strong></span>
@@ -503,17 +581,18 @@ footer {
 </section>
             
             
-<section class="related-rankings"><h2>関連するイヤホンランキング</h2><div class="related-links"><a href="/earphones/">ランキング一覧</a><a href="/">総合ランキング</a><a href="/earphones/under-10000/">5,001〜10,000円</a><a href="/earphones/wireless/">ワイヤレス</a><a href="/earphones/wired/">有線</a><a href="/earphones/earcuff/">イヤーカフ</a><a href="/earphones/most-reviewed/">レビュー件数順</a></div></section>
+<section class="related-rankings"><h2>関連するイヤホンランキング</h2><div class="related-links"><a href="/earphones/">ランキング一覧</a><a href="/">総合ランキング</a><a href="/earphones/under-10000/">5,001〜10,000円</a><a href="/earphones/wireless/">ワイヤレス</a><a href="/earphones/wired/">有線</a><a href="/earphones/earcuff/">イヤーカフ</a><a href="/earphones/most-reviewed/">レビュー件数順</a><a href="/earphones/review-guide/">レビューの読み方</a></div></section>
 </main>
 <footer>
-    <p>
-        当サイトは楽天アフィリエイトを利用しています。
-        価格・在庫等は取得時点の情報です。
-        購入前に楽天市場の商品ページで最新情報をご確認ください。
-    </p>
-    <a href="https://developers.rakuten.com/" target="_blank" rel="noopener">
-        Supported by Rakuten Developers
-    </a>
+    <p>当サイトは楽天アフィリエイトを利用しています。価格・在庫・レビュー件数などは取得時点の情報です。</p>
+    <nav class="footer-links" aria-label="サイト情報">
+        <a href="/about/">運営方針</a>
+        <a href="/earphones/methodology/">ランキング基準</a>
+        <a href="/earphones/review-guide/">レビューの読み方</a>
+        <a href="/contact/">お問い合わせ</a>
+        <a href="/privacy/">プライバシーポリシー</a>
+        <a href="https://developers.rakuten.com/" target="_blank" rel="noopener">Supported by Rakuten Developers</a>
+    </nav>
 </footer>
 <script defer src="/assets/analytics.js"></script>
 </body>
