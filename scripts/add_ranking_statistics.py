@@ -12,7 +12,10 @@ TARGETS = {
 
 STYLESHEET = '<link rel="stylesheet" href="/assets/seo-hardening.css">'
 CARD_RE = re.compile(r'<article class="card">(?P<body>.*?)</article>', re.DOTALL)
-SUMMARY_RE = re.compile(r'<section class="quality-section ranking-data-summary">.*?</section>', re.DOTALL)
+SUMMARY_RE = re.compile(
+    r'<section class="quality-section ranking-data-summary".*?</section>',
+    re.DOTALL,
+)
 
 
 def parse_number(value):
@@ -20,23 +23,67 @@ def parse_number(value):
 
 
 def parse_cards(text, label):
-    items = []
-    matches = list(CARD_RE.finditer(text))
-    if len(matches) != 10:
-        raise RuntimeError(f"{label}: 商品カードが10件ではありません ({len(matches)})")
+    ranked = {}
 
-    for match in matches:
+    for match in CARD_RE.finditer(text):
         body = match.group("body")
-        rating_match = re.search(r"★\s*([0-9.]+)\s*<span>\(([0-9,]+)件\)</span>", body, re.DOTALL)
-        price_match = re.search(r'<div class="price">([0-9,]+)円</div>', body)
+        rank_match = re.search(
+            r'<div class="rank">\s*(\d+)\s*</div>',
+            body,
+            re.DOTALL,
+        )
+        if not rank_match:
+            continue
+
+        rank = int(rank_match.group(1))
+        if rank < 1 or rank > 10:
+            continue
+        if rank in ranked:
+            raise RuntimeError(f"{label}: {rank}位の商品カードが重複しています")
+
+        rating_match = re.search(
+            r'★\s*([0-9]+(?:\.[0-9]+)?)\s*'
+            r'<span>\s*\(([0-9,]+)件\)\s*</span>',
+            body,
+            re.DOTALL,
+        )
+        price_match = re.search(
+            r'<div class="price">\s*([0-9,]+)円\s*</div>',
+            body,
+            re.DOTALL,
+        )
         if not rating_match or not price_match:
-            raise RuntimeError(f"{label}: 商品カードの数値解析に失敗しました")
-        items.append({
+            raise RuntimeError(
+                f"{label}: {rank}位の商品カードの数値解析に失敗しました"
+            )
+
+        ranked[rank] = {
             "rating": float(rating_match.group(1)),
             "reviews": parse_number(rating_match.group(2)),
             "price": parse_number(price_match.group(1)),
-        })
-    return items, matches
+            "match": match,
+        }
+
+    expected = set(range(1, 11))
+    actual = set(ranked)
+    if actual != expected:
+        missing = sorted(expected - actual)
+        extra = sorted(actual - expected)
+        raise RuntimeError(
+            f"{label}: 1〜10位のカードを正しく取得できません。"
+            f" missing={missing}, extra={extra}, found={len(ranked)}"
+        )
+
+    ordered = [ranked[rank] for rank in range(1, 11)]
+    items = [
+        {
+            "rating": item["rating"],
+            "reviews": item["reviews"],
+            "price": item["price"],
+        }
+        for item in ordered
+    ]
+    return items, ranked[10]["match"]
 
 
 def build_summary(label, items):
@@ -72,10 +119,10 @@ for path, label in TARGETS.items():
 
     text = path.read_text(encoding="utf-8")
     text = SUMMARY_RE.sub("", text)
-    items, matches = parse_cards(text, label)
+    items, rank10_match = parse_cards(text, label)
 
-    # 既存のランキング10商品を先に見せたまま、その直後に独自集計を置く。
-    insert_at = matches[-1].end()
+    # 1〜10位のランキング商品を見せた直後に独自集計を配置する。
+    insert_at = rank10_match.end()
     summary = build_summary(label, items)
     text = text[:insert_at] + "\n" + summary + text[insert_at:]
 
@@ -88,5 +135,6 @@ for path, label in TARGETS.items():
         raise RuntimeError(f"独自集計セクションの数が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
+    print(f"{label}: statistics OK")
 
 print("Ranking TOP10 statistics: OK")
