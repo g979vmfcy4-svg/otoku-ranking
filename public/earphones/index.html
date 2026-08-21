@@ -35,6 +35,7 @@
 
 
 
+
 <!-- search-meta:start -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#bf0000">
@@ -46,6 +47,7 @@
 <meta name="twitter:card" content="summary">
 <!-- search-meta:end -->
 <link rel="stylesheet" href="/assets/design-polish.css">
+<link rel="stylesheet" href="/assets/conversion-polish.css">
 </head>
 <body>
 <a class="skip-link" href="#main-content">本文へ移動</a>
@@ -55,17 +57,32 @@
         <p>予算・イヤホンの種類・レビュー実績から、自分に合うランキングへ進めます。</p>
     </div>
 </header>
-<nav class="ranking-nav" aria-label="イヤホンランキング">
-    <a href="/earphones/">ランキング一覧</a>
-    <a href="/">総合</a>
-    <a href="/earphones/under-5000/">5,000円以下</a>
-    <a href="/earphones/under-10000/">5千〜1万円</a>
-    <a href="/earphones/wireless/">ワイヤレス</a>
-    <a href="/earphones/wired/">有線</a>
-    <a href="/earphones/earcuff/">イヤーカフ</a>
-    <a href="/earphones/most-reviewed/">レビュー件数順</a>
-    <a href="/earphones/methodology/">ランキング基準</a>
-    <a href="/about/">このサイトについて</a>
+<nav class="ranking-nav ranking-nav-polished" aria-label="イヤホンランキング">
+    <a class="nav-primary" href="/earphones/">一覧</a>
+    <a class="nav-primary" href="/">総合</a>
+    <details class="nav-group">
+        <summary>価格</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/under-5000/">5,000円以下</a>
+            <a href="/earphones/under-10000/">5,001〜10,000円</a>
+        </div>
+    </details>
+    <details class="nav-group">
+        <summary>種類</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/wireless/">ワイヤレス</a>
+            <a href="/earphones/wired/">有線</a>
+            <a href="/earphones/earcuff/">イヤーカフ</a>
+        </div>
+    </details>
+    <a class="nav-primary" href="/earphones/most-reviewed/">レビュー</a>
+    <details class="nav-group nav-group-secondary">
+        <summary>基準・運営</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/methodology/">ランキング基準</a>
+            <a href="/about/">このサイトについて</a>
+        </div>
+    </details>
 </nav>
 <main id="main-content">
 <nav class="breadcrumbs" aria-label="パンくず"><a href="/">トップ</a><span>›</span><span aria-current="page">イヤホンランキング</span></nav>

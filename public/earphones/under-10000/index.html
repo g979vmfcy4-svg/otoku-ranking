@@ -163,6 +163,7 @@ footer {
 <link rel="preconnect" href="https://thumbnail.image.rakuten.co.jp" crossorigin>
 <!-- search-meta:end -->
 <link rel="stylesheet" href="/assets/design-polish.css">
+<link rel="stylesheet" href="/assets/conversion-polish.css">
 </head>
 <body>
 <a class="skip-link" href="#main-content">本文へ移動</a>
@@ -172,28 +173,52 @@ footer {
         <p>楽天市場の商品データから5,001〜10,000円のイヤホンだけを抽出し、毎日自動比較しています。</p>
     </div>
 </header>
-<nav class="ranking-nav" aria-label="イヤホンランキング">
-    <a href="/earphones/">ランキング一覧</a>
-    <a href="/">総合</a>
-    <a href="/earphones/under-5000/">5,000円以下</a>
-    <a href="/earphones/under-10000/">5千〜1万円</a>
-    <a href="/earphones/wireless/">ワイヤレス</a>
-    <a href="/earphones/wired/">有線</a>
-    <a href="/earphones/earcuff/">イヤーカフ</a>
-    <a href="/earphones/most-reviewed/">レビュー件数順</a>
-    <a href="/earphones/methodology/">ランキング基準</a>
-    <a href="/about/">このサイトについて</a>
+<nav class="ranking-nav ranking-nav-polished" aria-label="イヤホンランキング">
+    <a class="nav-primary" href="/earphones/">一覧</a>
+    <a class="nav-primary" href="/">総合</a>
+    <details class="nav-group">
+        <summary>価格</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/under-5000/">5,000円以下</a>
+            <a href="/earphones/under-10000/">5,001〜10,000円</a>
+        </div>
+    </details>
+    <details class="nav-group">
+        <summary>種類</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/wireless/">ワイヤレス</a>
+            <a href="/earphones/wired/">有線</a>
+            <a href="/earphones/earcuff/">イヤーカフ</a>
+        </div>
+    </details>
+    <a class="nav-primary" href="/earphones/most-reviewed/">レビュー</a>
+    <details class="nav-group nav-group-secondary">
+        <summary>基準・運営</summary>
+        <div class="nav-group-menu">
+            <a href="/earphones/methodology/">ランキング基準</a>
+            <a href="/about/">このサイトについて</a>
+        </div>
+    </details>
 </nav>
 <main id="main-content">
 <nav class="breadcrumbs" aria-label="パンくず"><a href="/">トップ</a><span>›</span><a href="/earphones/">イヤホンランキング</a><span>›</span><span aria-current="page">5,001〜10,000円</span></nav>
     <div class="notice">
         <span class="pr">広告・PR</span><br>
-        <strong>最終更新：</strong> 2026年08月21日 18:57<br>
+        <strong>最終更新：</strong> 2026年08月21日 19:09<br>
         5,001〜10,000円かつレビュー10件以上の商品を対象に、候補商品の平均評価を基準にベイズ補正を行い、評価の高さとレビュー件数の信頼度を両方反映して順位を決定しています。
     </div>
     
             
-            <article class="card">
+            <!-- ranking-trust:start -->
+<div class="ranking-trust-strip" aria-label="ランキング条件">
+    <span><small>更新</small><strong>毎日</strong></span>
+    <span><small>候補</small><strong>最大30商品</strong></span>
+    <span><small>最低レビュー</small><strong>10件</strong></span>
+    <span><small>順位基準</small><strong>レビュー件数を考慮して補正</strong></span>
+    <a href="/earphones/methodology/">算出方法を見る →</a>
+</div>
+<!-- ranking-trust:end -->
+<article class="card">
                 <div class="rank">1</div>
                 <div class="photo"><img src="https://thumbnail.image.rakuten.co.jp/@0_mall/radius-direct/cabinet/product_image/10760466/hp-c28bt_f_0_n1.jpg?_ex=128x128" alt="【ポイント10倍】ラディウス HP-C28BT NEKO 完全ワイヤレスイヤホン｜radius 猫イヤホン 猫の鳴き声アナウンス ねこ マーブル Bluetooth IPX4 防滴 女性 おしゃれ かわいい プレゼント ギフト" loading="eager" fetchpriority="high" width="128" height="128"></div>
                 <div class="info">
@@ -207,7 +232,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>1位</strong></div><div class="insight-metric"><span>評価順位</span><strong>2位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>3位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="1"><div class="metric-head"><span>補正評価</span><strong>1位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:100%"></span></span></div><div class="insight-metric" data-rank="2"><div class="metric-head"><span>評価順位</span><strong>2位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:90%"></span></span></div><div class="insight-metric" data-rank="3"><div class="metric-head"><span>レビュー数</span><strong>3位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:80%"></span></span></div></div>
   <p class="insight-detail">★4.69（TOP10平均+0.07）・670件・8,820円（価格中央値+1,185円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -234,7 +259,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>2位</strong></div><div class="insight-metric"><span>評価順位</span><strong>1位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>10位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="2"><div class="metric-head"><span>補正評価</span><strong>2位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:90%"></span></span></div><div class="insight-metric" data-rank="1"><div class="metric-head"><span>評価順位</span><strong>1位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:100%"></span></span></div><div class="insight-metric" data-rank="10"><div class="metric-head"><span>レビュー数</span><strong>10位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:10%"></span></span></div></div>
   <p class="insight-detail">★4.71（TOP10平均+0.09）・180件・5,980円（価格中央値−1,655円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -261,7 +286,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>3位</strong></div><div class="insight-metric"><span>評価順位</span><strong>3位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>4位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="3"><div class="metric-head"><span>補正評価</span><strong>3位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:80%"></span></span></div><div class="insight-metric" data-rank="3"><div class="metric-head"><span>評価順位</span><strong>3位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:80%"></span></span></div><div class="insight-metric" data-rank="4"><div class="metric-head"><span>レビュー数</span><strong>4位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:70%"></span></span></div></div>
   <p class="insight-detail">★4.65（TOP10平均+0.03）・555件・5,990円（価格中央値−1,645円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -288,7 +313,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>4位</strong></div><div class="insight-metric"><span>評価順位</span><strong>3位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>7位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="4"><div class="metric-head"><span>補正評価</span><strong>4位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:70%"></span></span></div><div class="insight-metric" data-rank="3"><div class="metric-head"><span>評価順位</span><strong>3位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:80%"></span></span></div><div class="insight-metric" data-rank="7"><div class="metric-head"><span>レビュー数</span><strong>7位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:40%"></span></span></div></div>
   <p class="insight-detail">★4.65（TOP10平均+0.03）・285件・5,990円（価格中央値−1,645円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -315,7 +340,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>5位</strong></div><div class="insight-metric"><span>評価順位</span><strong>5位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>1位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="5"><div class="metric-head"><span>補正評価</span><strong>5位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:60%"></span></span></div><div class="insight-metric" data-rank="5"><div class="metric-head"><span>評価順位</span><strong>5位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:60%"></span></span></div><div class="insight-metric" data-rank="1"><div class="metric-head"><span>レビュー数</span><strong>1位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:100%"></span></span></div></div>
   <p class="insight-detail">★4.61（TOP10平均−0.01）・2,145件・7,990円（価格中央値+355円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -342,7 +367,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>6位</strong></div><div class="insight-metric"><span>評価順位</span><strong>6位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>5位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="6"><div class="metric-head"><span>補正評価</span><strong>6位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:50%"></span></span></div><div class="insight-metric" data-rank="6"><div class="metric-head"><span>評価順位</span><strong>6位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:50%"></span></span></div><div class="insight-metric" data-rank="5"><div class="metric-head"><span>レビュー数</span><strong>5位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:60%"></span></span></div></div>
   <p class="insight-detail">★4.60（TOP10平均−0.02）・459件・9,900円（価格中央値+2,265円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -369,7 +394,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>7位</strong></div><div class="insight-metric"><span>評価順位</span><strong>6位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>6位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="7"><div class="metric-head"><span>補正評価</span><strong>7位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:40%"></span></span></div><div class="insight-metric" data-rank="6"><div class="metric-head"><span>評価順位</span><strong>6位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:50%"></span></span></div><div class="insight-metric" data-rank="6"><div class="metric-head"><span>レビュー数</span><strong>6位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:50%"></span></span></div></div>
   <p class="insight-detail">★4.60（TOP10平均−0.02）・458件・7,280円（価格中央値−355円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -396,7 +421,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>8位</strong></div><div class="insight-metric"><span>評価順位</span><strong>8位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>2位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="8"><div class="metric-head"><span>補正評価</span><strong>8位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:30%"></span></span></div><div class="insight-metric" data-rank="8"><div class="metric-head"><span>評価順位</span><strong>8位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:30%"></span></span></div><div class="insight-metric" data-rank="2"><div class="metric-head"><span>レビュー数</span><strong>2位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:90%"></span></span></div></div>
   <p class="insight-detail">★4.55（TOP10平均−0.07）・892件・5,299円（価格中央値−2,336円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -423,7 +448,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>9位</strong></div><div class="insight-metric"><span>評価順位</span><strong>8位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>8位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="9"><div class="metric-head"><span>補正評価</span><strong>9位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:20%"></span></span></div><div class="insight-metric" data-rank="8"><div class="metric-head"><span>評価順位</span><strong>8位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:30%"></span></span></div><div class="insight-metric" data-rank="8"><div class="metric-head"><span>レビュー数</span><strong>8位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:30%"></span></span></div></div>
   <p class="insight-detail">★4.55（TOP10平均−0.07）・258件・9,990円（価格中央値+2,355円）</p>
 </div>
 <!-- rank-insight:end -->
@@ -450,7 +475,7 @@ footer {
 <!-- rank-insight:start -->
 <div class="card-insight" aria-label="この商品の順位データ">
   <div class="card-insight-label">順位の根拠</div>
-  <div class="insight-metrics"><div class="insight-metric"><span>補正評価</span><strong>10位</strong></div><div class="insight-metric"><span>評価順位</span><strong>8位</strong></div><div class="insight-metric"><span>レビュー数</span><strong>9位</strong></div></div>
+  <div class="insight-metrics"><div class="insight-metric" data-rank="10"><div class="metric-head"><span>補正評価</span><strong>10位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:10%"></span></span></div><div class="insight-metric" data-rank="8"><div class="metric-head"><span>評価順位</span><strong>8位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:30%"></span></span></div><div class="insight-metric" data-rank="9"><div class="metric-head"><span>レビュー数</span><strong>9位</strong></div><span class="metric-track" aria-hidden="true"><span class="metric-fill" style="width:20%"></span></span></div></div>
   <p class="insight-detail">★4.55（TOP10平均−0.07）・195件・9,980円（価格中央値+2,345円）</p>
 </div>
 <!-- rank-insight:end -->
