@@ -13,9 +13,14 @@ SITE_URL = "https://otoku-ranking.pages.dev/"
 API_URL = "https://openapi.rakuten.co.jp/ichibaranking/api/IchibaItem/Ranking/20220601"
 EARPHONE_GENRE_ID = 502835
 TOP_PATH = Path("public/index.html")
+METHODOLOGY_PATH = Path("public/earphones/methodology/index.html")
 STYLESHEET = '<link rel="stylesheet" href="/assets/sales-comparison.css">'
 SECTION_RE = re.compile(
     r'\s*<!-- sales-compare:start -->.*?<!-- sales-compare:end -->\s*',
+    re.DOTALL,
+)
+METHODOLOGY_RE = re.compile(
+    r'\s*<!-- sales-method:start -->.*?<!-- sales-method:end -->\s*',
     re.DOTALL,
 )
 CARD_RE = re.compile(r'<article class="card">(?P<body>.*?)</article>', re.DOTALL)
@@ -290,9 +295,28 @@ def insert_section(text, section):
     return text
 
 
+def update_methodology():
+    if not METHODOLOGY_PATH.exists():
+        raise RuntimeError("ランキング基準ページがありません。")
+    text = METHODOLOGY_PATH.read_text(encoding="utf-8")
+    text = METHODOLOGY_RE.sub("\n", text)
+    section = '''<!-- sales-method:start -->
+<section><h2>楽天売れ筋との比較</h2><p>トップページでは、当サイトの高評価ランキングとは別に、楽天市場ランキングAPIのリアルタイム順位を取得して「売れ筋」と「高評価」の違いを比較します。</p><p>楽天側のgenreId 502835は「ヘッドホン・イヤホン」ジャンルのため、APIが返す元のジャンル順位は変更せず、商品名に「イヤホン」「イヤフォン」「earbud」「AirPods」「FreeBuds」などイヤホンと判断できる表現がある商品を上位順に10件抽出します。明確なヘッドホン商品は比較対象から除外します。</p><p>当サイト側の高評価TOP10とは楽天の商品コードで照合します。レビュー10件未満の商品は当サイト高評価ランキングの対象外として表示し、それ以外で一致しない商品は「TOP10圏外」と表示します。売れ筋順位そのものを当サイトの高評価順位計算には使用しません。</p></section>
+<!-- sales-method:end -->'''
+    marker = '<section><h2>自動更新とfail-safe</h2>'
+    if marker not in text:
+        raise RuntimeError("ランキング基準ページの挿入位置が見つかりません。")
+    text = text.replace(marker, section + "\n" + marker, 1)
+    if text.count('<!-- sales-method:start -->') != 1:
+        raise RuntimeError("売れ筋比較方法の説明件数が不正です。")
+    METHODOLOGY_PATH.write_text(text, encoding="utf-8")
+
+
 if not TOP_PATH.exists():
     raise RuntimeError("トップページがありません。")
 
+# API取得が一時的に失敗しても、比較方法の説明は毎回同じ内容へ整える。
+update_methodology()
 page_text = TOP_PATH.read_text(encoding="utf-8")
 own_ranks = current_high_rating_ranks(page_text)
 
