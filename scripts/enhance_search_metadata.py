@@ -16,6 +16,7 @@ PAGES = [
     Path("public/about/index.html"),
 ]
 
+DESIGN_STYLESHEET = '<link rel="stylesheet" href="/assets/design-polish.css">'
 META_BLOCK_RE = re.compile(
     r'<!-- search-meta:start -->.*?<!-- search-meta:end -->',
     re.DOTALL,
@@ -31,6 +32,10 @@ ROBOTS_META_RE = re.compile(
 RAKUTEN_IMAGE_RE = re.compile(
     r'<img\b[^>]*src="https://thumbnail\.image\.rakuten\.co\.jp[^>]*>',
     re.IGNORECASE,
+)
+SKIP_LINK_RE = re.compile(
+    r'\s*<a class="skip-link" href="#main-content">.*?</a>\s*',
+    re.DOTALL,
 )
 
 
@@ -127,6 +132,30 @@ def optimize_images(text):
     return text[:match.start()] + optimized + text[match.end():]
 
 
+def add_design_accessibility(text, path):
+    text = text.replace(DESIGN_STYLESHEET + "\n", "")
+    text = text.replace(DESIGN_STYLESHEET, "")
+    if "</head>" not in text:
+        raise RuntimeError(f"</head> がありません: {path}")
+    text = text.replace("</head>", DESIGN_STYLESHEET + "\n</head>", 1)
+
+    text = SKIP_LINK_RE.sub("\n", text)
+    main_match = re.search(r'<main\b([^>]*)>', text)
+    if not main_match:
+        raise RuntimeError(f"main 要素がありません: {path}")
+    main_tag = main_match.group(0)
+    if 'id="main-content"' not in main_tag:
+        new_main = main_tag[:-1] + ' id="main-content">'
+        text = text[:main_match.start()] + new_main + text[main_match.end():]
+
+    body_match = re.search(r'<body\b[^>]*>', text)
+    if not body_match:
+        raise RuntimeError(f"body 要素がありません: {path}")
+    skip_link = '<a class="skip-link" href="#main-content">本文へ移動</a>'
+    text = text[:body_match.end()] + "\n" + skip_link + text[body_match.end():]
+    return text
+
+
 for path in PAGES:
     if not path.exists():
         raise RuntimeError(f"検索メタデータ対象ページがありません: {path}")
@@ -158,6 +187,7 @@ for path in PAGES:
 
     text = enable_large_image_preview(text, path)
     text = optimize_images(text)
+    text = add_design_accessibility(text, path)
 
     if text.count('rel="icon" href="/favicon.svg"') != 1:
         raise RuntimeError(f"favicon設定が不正です: {path}")
@@ -165,7 +195,13 @@ for path in PAGES:
         raise RuntimeError(f"OGタイトル設定が不正です: {path}")
     if text.count("max-image-preview:large") != 1:
         raise RuntimeError(f"画像プレビュー設定が不正です: {path}")
+    if text.count(DESIGN_STYLESHEET) != 1:
+        raise RuntimeError(f"デザインCSS設定が不正です: {path}")
+    if text.count('class="skip-link" href="#main-content"') != 1:
+        raise RuntimeError(f"スキップリンク設定が不正です: {path}")
+    if text.count('id="main-content"') != 1:
+        raise RuntimeError(f"本文アンカー設定が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
 
-print("Search metadata / favicon / image performance: OK")
+print("Search metadata / favicon / image performance / UX polish: OK")
