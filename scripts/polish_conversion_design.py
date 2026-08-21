@@ -29,7 +29,7 @@ RANKING_MODES = {
 TOP_PATH = Path("public/index.html")
 STYLESHEET = '<link rel="stylesheet" href="/assets/conversion-polish.css">'
 NAV_RE = re.compile(
-    r'<nav class="ranking-nav" aria-label="イヤホンランキング">.*?</nav>',
+    r'<nav class="ranking-nav(?: ranking-nav-polished)?" aria-label="イヤホンランキング">.*?</nav>',
     re.DOTALL,
 )
 TRUST_RE = re.compile(
@@ -45,6 +45,9 @@ NEW_METRIC_RE = re.compile(
 )
 BASE_METRIC_RE = re.compile(
     r'<div class="insight-metric"><span>([^<]+)</span><strong>(\d+)位</strong></div>'
+)
+REVIEW_DUPLICATE_RE = re.compile(
+    r'<div class="insight-metric"><span>レビュー数</span><strong>\d+位</strong></div>'
 )
 
 NAV_HTML = '''<nav class="ranking-nav ranking-nav-polished" aria-label="イヤホンランキング">
@@ -198,8 +201,15 @@ def normalize_metrics(text):
     return NEW_METRIC_RE.sub(to_base, text)
 
 
-def add_metric_bars(text, path):
+def add_metric_bars(text, path, mode):
     text = normalize_metrics(text)
+    expected = 30
+    if mode == "review_count":
+        text, removed = REVIEW_DUPLICATE_RE.subn("", text)
+        if removed != 10:
+            raise RuntimeError(f"レビュー件数順の重複指標が10件ではありません: {path} removed={removed}")
+        expected = 20
+
     count = 0
 
     def replace(match):
@@ -218,8 +228,8 @@ def add_metric_bars(text, path):
         )
 
     text = BASE_METRIC_RE.sub(replace, text)
-    if count != 30:
-        raise RuntimeError(f"順位バーが30個ではありません: {path} count={count}")
+    if count != expected:
+        raise RuntimeError(f"順位バーの件数が不正です: {path} count={count} expected={expected}")
     return text
 
 
@@ -235,8 +245,9 @@ for path in PAGES:
         text = polish_quick_picks(text)
 
     if path in RANKING_MODES:
-        text = add_metric_bars(text, path)
-        text = add_trust_strip(text, path, RANKING_MODES[path])
+        mode = RANKING_MODES[path]
+        text = add_metric_bars(text, path, mode)
+        text = add_trust_strip(text, path, mode)
 
     path.write_text(text, encoding="utf-8")
 
