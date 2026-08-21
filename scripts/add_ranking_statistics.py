@@ -131,7 +131,7 @@ for path, label in TARGETS.items():
             raise RuntimeError(f"</head> がありません: {path}")
         text = text.replace("</head>", STYLESHEET + "\n</head>", 1)
 
-    if text.count('class="ranking-data-summary"') != 1:
+    if text.count('class="quality-section ranking-data-summary"') != 1:
         raise RuntimeError(f"独自集計セクションの数が不正です: {path}")
 
     path.write_text(text, encoding="utf-8")
