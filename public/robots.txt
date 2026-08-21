@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://otoku-ranking.pages.dev/sitemap.xml
+Sitemap: https://otoku-ranking.pages.dev/sitemap.txt
