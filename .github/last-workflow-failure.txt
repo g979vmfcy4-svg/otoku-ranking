@@ -1,4 +1,4 @@
-workflow_failure=2026-08-21T04:12:22Z
+workflow_failure=2026-08-21T04:31:40Z
 syntax=success
 playwright=success
 base_ranking=success
@@ -16,16 +16,6 @@ commit_pages=skipped
 
 --- category generation tail ---
 Category generation attempt 1/3
-Traceback (most recent call last):
-  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 569, in <module>
-    items = fetch_api(page, category)
-  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 315, in fetch_api
-    raise RuntimeError(
-    ...<2 lines>...
-    )
-RuntimeError: 楽天API HTTP 429 (earcuff)
-{ "statusCode": 429, "message": "Rate limit is exceeded. Try again in 1 seconds." }
-Category generation attempt 2/3
 wireless category ranking: OK
   API取得件数: 30
   有効候補件数: 29
@@ -42,3 +32,9 @@ earcuff category ranking: OK
   掲載件数: 10
   ベイズ事前平均: 4.2815
 Wireless / wired / earcuff category pages generated: OK
+
+--- ranking statistics tail ---
+Traceback (most recent call last):
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/add_ranking_statistics.py", line 135, in <module>
+    raise RuntimeError(f"独自集計セクションの数が不正です: {path}")
+RuntimeError: 独自集計セクションの数が不正です: public/index.html
