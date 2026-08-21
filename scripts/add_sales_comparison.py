@@ -71,6 +71,33 @@ def compact_name(value, limit=52):
     return value or "商品名なし"
 
 
+def is_earphone_item(item):
+    name = str(item.get("itemName") or "").lower().replace("　", " ")
+    earphone_terms = (
+        "イヤホン",
+        "イヤフォン",
+        "earphone",
+        "earphones",
+        "earbud",
+        "earbuds",
+        "airpods",
+        "freebuds",
+        "galaxy buds",
+        "pixel buds",
+    )
+    headphone_terms = (
+        "ヘッドホン",
+        "ヘッドフォン",
+        "headphone",
+        "headphones",
+    )
+    if any(term in name for term in earphone_terms):
+        return True
+    if any(term in name for term in headphone_terms):
+        return False
+    return False
+
+
 def item_code_from_affiliate(href):
     try:
         parsed = urllib.parse.urlparse(html.unescape(href))
@@ -183,26 +210,35 @@ def fetch_ranking(page):
 
 
 def build_section(data, items, own_ranks):
-    top10 = sorted(items, key=lambda item: to_int(item.get("rank")))[:10]
+    ranked = sorted(
+        [item for item in items if to_int(item.get("rank")) > 0],
+        key=lambda item: to_int(item.get("rank")),
+    )
+    earphone_items = [item for item in ranked if is_earphone_item(item)]
+    top10 = earphone_items[:10]
     if len(top10) < 10:
-        raise RuntimeError(f"楽天売れ筋TOP10が不足しています: {len(top10)}")
+        raise RuntimeError(
+            f"楽天売れ筋からイヤホン該当商品を10件抽出できません: {len(top10)}"
+        )
 
     overlaps = 0
     rows = []
     for item in top10:
         sales_rank = to_int(item.get("rank"))
         item_code = str(item.get("itemCode") or "")
+        reviews = to_int(item.get("reviewCount"))
         own_rank = own_ranks.get(item_code)
         if own_rank:
             overlaps += 1
             own_label = f'<strong class="compare-hit">{own_rank}位</strong>'
+        elif reviews < 10:
+            own_label = '<span class="compare-out">対象外（10件未満）</span>'
         else:
             own_label = '<span class="compare-out">TOP10圏外</span>'
 
         name = html.escape(compact_name(item.get("itemName", "")))
         full_name = html.escape(str(item.get("itemName", "")), quote=True)
         rating = to_float(item.get("reviewAverage"))
-        reviews = to_int(item.get("reviewCount"))
         price = to_int(item.get("itemPrice"))
         affiliate_url = str(item.get("affiliateUrl") or "")
         if affiliate_url.startswith("https://") and "hb.afl.rakuten.co.jp" in affiliate_url:
@@ -215,7 +251,7 @@ def build_section(data, items, own_ranks):
 
         rows.append(
             '<div class="compare-row" role="row">'
-            f'<div role="cell" data-label="楽天売れ筋"><strong>{sales_rank}位</strong></div>'
+            f'<div role="cell" data-label="楽天ジャンル順位"><strong>{sales_rank}位</strong></div>'
             f'<div role="cell" data-label="商品">{product}<small>{price:,}円</small></div>'
             f'<div role="cell" data-label="レビュー">★ {rating:.2f}<small>{reviews:,}件</small></div>'
             f'<div role="cell" data-label="高評価順位">{own_label}</div>'
@@ -227,16 +263,16 @@ def build_section(data, items, own_ranks):
 <section class="sales-compare-section" aria-label="楽天売れ筋と高評価ランキングの比較">
   <div class="sales-compare-head">
     <span class="section-kicker">売れ筋と高評価を比べる</span>
-    <h2>楽天リアルタイム売れ筋TOP10との比較</h2>
-    <p>楽天公式の売れ筋順位と、当サイトのレビュー件数を考慮した高評価順位は基準が異なります。売れ筋TOP10のうち、今回の高評価TOP10にも入った商品は<strong>{overlaps}商品</strong>です。</p>
+    <h2>楽天売れ筋のイヤホン上位商品と高評価TOP10を比較</h2>
+    <p>楽天公式の「ヘッドホン・イヤホン」リアルタイムランキングから、商品名でイヤホンと確認できる商品を上位順に10件抽出しています。元の楽天ジャンル順位はそのまま表示し、当サイトの高評価TOP10と照合します。今回、両方に入った商品は<strong>{overlaps}商品</strong>です。</p>
   </div>
-  <div class="compare-table" role="table" aria-label="売れ筋順位と高評価順位の比較">
+  <div class="compare-table" role="table" aria-label="楽天ジャンル順位と高評価順位の比較">
     <div class="compare-header" role="row">
-      <div role="columnheader">楽天売れ筋</div><div role="columnheader">商品</div><div role="columnheader">レビュー</div><div role="columnheader">高評価順位</div>
+      <div role="columnheader">楽天ジャンル順位</div><div role="columnheader">商品</div><div role="columnheader">レビュー</div><div role="columnheader">高評価順位</div>
     </div>
     {''.join(rows)}
   </div>
-  <p class="compare-note">楽天売れ筋は楽天市場ランキングAPIのリアルタイム順位（{updated}）。高評価順位は同日の当サイト総合TOP10です。音質・装着感などの実機評価ではありません。</p>
+  <p class="compare-note">楽天側はランキングAPIのリアルタイム順位（{updated}）。当サイト高評価はレビュー10件以上を対象にレビュー件数を考慮して補正した総合TOP10です。商品名にイヤホン・AirPods等のイヤホン表現がない明確なヘッドホン商品は比較対象から除外します。音質・装着感などの実機評価ではありません。</p>
 </section>
 <!-- sales-compare:end -->'''
 
