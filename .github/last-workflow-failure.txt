@@ -1,4 +1,4 @@
-workflow_failure=2026-08-21T03:18:10Z
+workflow_failure=2026-08-21T04:12:22Z
 syntax=success
 playwright=success
 base_ranking=success
@@ -16,6 +16,16 @@ commit_pages=skipped
 
 --- category generation tail ---
 Category generation attempt 1/3
+Traceback (most recent call last):
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 569, in <module>
+    items = fetch_api(page, category)
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 315, in fetch_api
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: 楽天API HTTP 429 (earcuff)
+{ "statusCode": 429, "message": "Rate limit is exceeded. Try again in 1 seconds." }
+Category generation attempt 2/3
 wireless category ranking: OK
   API取得件数: 30
   有効候補件数: 29
