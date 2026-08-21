@@ -20,12 +20,14 @@ on:
       - "scripts/enhance_seo_structure.py"
       - "scripts/finalize_category_names.py"
       - "scripts/add_ranking_statistics.py"
+      - "scripts/add_card_insights.py"
       - "scripts/enhance_search_metadata.py"
       - "scripts/submit_indexnow.py"
       - "scripts/inject_analytics.py"
       - "public/assets/site-v2.css"
       - "public/assets/seo-expansion.css"
       - "public/assets/seo-hardening.css"
+      - "public/assets/data-insights.css"
       - "public/assets/analytics.js"
       - "public/earphones/index.html"
       - "public/404.html"
@@ -56,7 +58,7 @@ jobs:
 
       - name: Check Python syntax
         id: syntax
-        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/enhance_search_metadata.py scripts/submit_indexnow.py scripts/inject_analytics.py
+        run: python -m py_compile generate.py scripts/inject_methodology_nav.py scripts/enhance_page_quality.py scripts/generate_price_bands.py scripts/generate_category_pages.py scripts/update_price_band_copy.py scripts/enhance_seo_structure.py scripts/finalize_category_names.py scripts/add_ranking_statistics.py scripts/add_card_insights.py scripts/enhance_search_metadata.py scripts/submit_indexnow.py scripts/inject_analytics.py
 
       - name: Install Playwright
         id: playwright
@@ -109,6 +111,10 @@ jobs:
       - name: Finalize category product names
         id: final_names
         run: python scripts/finalize_category_names.py
+
+      - name: Add product ranking reasons
+        id: rank_reasons
+        run: python scripts/add_card_insights.py
 
       - name: Add ranking statistics
         id: ranking_stats
@@ -176,6 +182,7 @@ jobs:
             echo "price_copy=${{ steps.price_copy.outcome }}"
             echo "seo_structure=${{ steps.seo_structure.outcome }}"
             echo "final_names=${{ steps.final_names.outcome }}"
+            echo "rank_reasons=${{ steps.rank_reasons.outcome }}"
             echo "ranking_stats=${{ steps.ranking_stats.outcome }}"
             echo "search_metadata=${{ steps.search_metadata.outcome }}"
             echo "analytics=${{ steps.analytics.outcome }}"
