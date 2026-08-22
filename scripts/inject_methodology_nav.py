@@ -121,6 +121,29 @@ def replace_single(pattern, replacement, text, label):
     return updated
 
 
+def replace_navigation(text, path):
+    """通常版・デザイン加工後のどちらのランキングナビにも対応する。"""
+    pattern = (
+        r'<nav\b(?=[^>]*\bclass="[^"]*\branking-nav\b[^"]*")'
+        r'(?=[^>]*\baria-label="イヤホンランキング")[^>]*>.*?</nav>'
+    )
+    updated, count = re.subn(
+        pattern,
+        NAV_HTML,
+        text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if count == 1:
+        return updated
+
+    # 古いページなどにナビ自体がない場合も、header直後へ安全に復元する。
+    if "</header>" in text:
+        return text.replace("</header>", "</header>\n" + NAV_HTML, 1)
+
+    raise RuntimeError(f"navigation: {path} を更新・復元できませんでした")
+
+
 for path, settings in PAGE_SETTINGS.items():
     if not path.exists():
         raise RuntimeError(f"SEO対象ページが見つかりません: {path}")
@@ -145,12 +168,7 @@ for path, settings in PAGE_SETTINGS.items():
         text,
         f"h1: {path}",
     )
-    text = replace_single(
-        r'<nav class="ranking-nav" aria-label="イヤホンランキング">.*?</nav>',
-        NAV_HTML,
-        text,
-        f"navigation: {path}",
-    )
+    text = replace_navigation(text, path)
 
     if path == Path("public/index.html"):
         if '"@type": "WebSite"' not in text:
