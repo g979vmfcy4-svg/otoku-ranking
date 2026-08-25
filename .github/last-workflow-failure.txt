@@ -1,0 +1,66 @@
+workflow_failure=2026-08-25T21:57:53Z
+syntax=success
+playwright=success
+base_ranking=success
+price_bands=success
+categories=failure
+navigation=skipped
+quality=skipped
+price_copy=skipped
+trust_content=skipped
+seo_structure=skipped
+final_names=skipped
+rank_reasons=skipped
+ranking_stats=skipped
+sales_compare=skipped
+search_metadata=skipped
+conversion_design=skipped
+analytics=skipped
+commit_pages=skipped
+
+--- price band generation tail ---
+Price-band generation attempt 1/3
+5,000円以下ランキング生成成功
+  API取得件数: 30
+  有効候補件数: 30
+  掲載件数: 10
+  ベイズ事前平均: 4.3617
+5,001〜10,000円ランキング生成成功
+  API取得件数: 30
+  有効候補件数: 18
+  掲載件数: 10
+  ベイズ事前平均: 4.4894
+価格帯重複なし: 5,000円以下 / 5,001〜10,000円
+Price band validation: OK
+
+--- category generation tail ---
+Category generation attempt 1/3
+Traceback (most recent call last):
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 569, in <module>
+    items = fetch_api(page, category)
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 315, in fetch_api
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: 楽天API HTTP 429 (earcuff)
+{ "statusCode": 429, "message": "Rate limit is exceeded. Try again in 1 seconds." }
+Category generation attempt 2/3
+Traceback (most recent call last):
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 569, in <module>
+    items = fetch_api(page, category)
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 315, in fetch_api
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: 楽天API HTTP 429 (wired)
+{ "statusCode": 429, "message": "Rate limit is exceeded. Try again in 1 seconds." }
+Category generation attempt 3/3
+Traceback (most recent call last):
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 569, in <module>
+    items = fetch_api(page, category)
+  File "/home/runner/work/otoku-ranking/otoku-ranking/scripts/generate_category_pages.py", line 315, in fetch_api
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: 楽天API HTTP 429 (earcuff)
+{ "statusCode": 429, "message": "Rate limit is exceeded. Try again in 1 seconds." }
